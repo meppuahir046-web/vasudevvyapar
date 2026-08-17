@@ -44,7 +44,7 @@ const NAV: NavItem[] = [
   { to: "/settings", labelKey: "nav.settings", icon: SettingsIcon },
 ];
 
-const BOTTOM = [NAV[0], NAV[1], NAV[2], NAV[6]];
+const BOTTOM: NavItem[] = [NAV[0]!, NAV[1]!, NAV[2]!, NAV[6]!];
 
 function useTheme() {
   const [dark, setDark] = useState(false);
