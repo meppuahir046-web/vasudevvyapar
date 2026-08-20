@@ -39,7 +39,7 @@ function SalesPage() {
 
   const sales = useQuery({
     queryKey: ["sales", range, search],
-    queryFn: () => fetchSales({ range: preset === "all" ? undefined : range, search }),
+    queryFn: () => (preset === "all" ? fetchSales({ search }) : fetchSales({ range, search })),
   });
 
   const rows = sales.data ?? [];
