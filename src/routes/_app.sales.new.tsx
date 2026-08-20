@@ -108,7 +108,7 @@ function NewSalePage() {
         discount: num(discount),
         paid: num(paid),
         method,
-        notes: notes.trim() || undefined,
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
         save_prices: savePrices,
       }),
     onSuccess: (id) => {
