@@ -19,6 +19,7 @@ import { Route as AppPurchasesRouteImport } from './routes/_app.purchases'
 import { Route as AppCustomersIndexRouteImport } from './routes/_app.customers.index'
 import { Route as AppCustomersIdRouteImport } from './routes/_app.customers.$id'
 import { Route as AppSalesIndexRouteImport } from './routes/_app.sales.index'
+import { Route as AppSalesIdRouteImport } from './routes/_app.sales.$id'
 import { Route as AppSalesNewRouteImport } from './routes/_app.sales.new'
 
 const IndexRoute = IndexRouteImport.update({
@@ -70,6 +71,11 @@ const AppSalesIndexRoute = AppSalesIndexRouteImport.update({
   path: '/sales/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSalesIdRoute = AppSalesIdRouteImport.update({
+  id: '/sales/$id',
+  path: '/sales/$id',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSalesNewRoute = AppSalesNewRouteImport.update({
   id: '/sales/new',
   path: '/sales/new',
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/products': typeof AppProductsRoute
   '/purchases': typeof AppPurchasesRoute
   '/customers/$id': typeof AppCustomersIdRoute
+  '/sales/$id': typeof AppSalesIdRoute
   '/sales/new': typeof AppSalesNewRoute
   '/customers/': typeof AppCustomersIndexRoute
   '/sales/': typeof AppSalesIndexRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/products': typeof AppProductsRoute
   '/purchases': typeof AppPurchasesRoute
   '/customers/$id': typeof AppCustomersIdRoute
+  '/sales/$id': typeof AppSalesIdRoute
   '/sales/new': typeof AppSalesNewRoute
   '/customers': typeof AppCustomersIndexRoute
   '/sales': typeof AppSalesIndexRoute
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/_app/products': typeof AppProductsRoute
   '/_app/purchases': typeof AppPurchasesRoute
   '/_app/customers/$id': typeof AppCustomersIdRoute
+  '/_app/sales/$id': typeof AppSalesIdRoute
   '/_app/sales/new': typeof AppSalesNewRoute
   '/_app/customers/': typeof AppCustomersIndexRoute
   '/_app/sales/': typeof AppSalesIndexRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/products'
     | '/purchases'
     | '/customers/$id'
+    | '/sales/$id'
     | '/sales/new'
     | '/customers/'
     | '/sales/'
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/products'
     | '/purchases'
     | '/customers/$id'
+    | '/sales/$id'
     | '/sales/new'
     | '/customers'
     | '/sales'
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/_app/products'
     | '/_app/purchases'
     | '/_app/customers/$id'
+    | '/_app/sales/$id'
     | '/_app/sales/new'
     | '/_app/customers/'
     | '/_app/sales/'
@@ -232,6 +244,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSalesIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/sales/$id': {
+      id: '/_app/sales/$id'
+      path: '/sales/$id'
+      fullPath: '/sales/$id'
+      preLoaderRoute: typeof AppSalesIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/sales/new': {
       id: '/_app/sales/new'
       path: '/sales/new'
@@ -248,6 +267,7 @@ interface AppRouteChildren {
   AppProductsRoute: typeof AppProductsRoute
   AppPurchasesRoute: typeof AppPurchasesRoute
   AppCustomersIdRoute: typeof AppCustomersIdRoute
+  AppSalesIdRoute: typeof AppSalesIdRoute
   AppSalesNewRoute: typeof AppSalesNewRoute
   AppCustomersIndexRoute: typeof AppCustomersIndexRoute
   AppSalesIndexRoute: typeof AppSalesIndexRoute
@@ -259,6 +279,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppProductsRoute: AppProductsRoute,
   AppPurchasesRoute: AppPurchasesRoute,
   AppCustomersIdRoute: AppCustomersIdRoute,
+  AppSalesIdRoute: AppSalesIdRoute,
   AppSalesNewRoute: AppSalesNewRoute,
   AppCustomersIndexRoute: AppCustomersIndexRoute,
   AppSalesIndexRoute: AppSalesIndexRoute,
