@@ -17,6 +17,8 @@ import { Route as AppInventoryRouteImport } from './routes/_app.inventory'
 import { Route as AppProductsRouteImport } from './routes/_app.products'
 import { Route as AppPurchasesRouteImport } from './routes/_app.purchases'
 import { Route as AppCustomersIndexRouteImport } from './routes/_app.customers.index'
+import { Route as AppCustomersIdRouteImport } from './routes/_app.customers.$id'
+import { Route as AppSalesNewRouteImport } from './routes/_app.sales.new'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -57,6 +59,16 @@ const AppCustomersIndexRoute = AppCustomersIndexRouteImport.update({
   path: '/customers/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCustomersIdRoute = AppCustomersIdRouteImport.update({
+  id: '/customers/$id',
+  path: '/customers/$id',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSalesNewRoute = AppSalesNewRouteImport.update({
+  id: '/sales/new',
+  path: '/sales/new',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -65,6 +77,8 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof AppInventoryRoute
   '/products': typeof AppProductsRoute
   '/purchases': typeof AppPurchasesRoute
+  '/customers/$id': typeof AppCustomersIdRoute
+  '/sales/new': typeof AppSalesNewRoute
   '/customers/': typeof AppCustomersIndexRoute
 }
 export interface FileRoutesByTo {
@@ -74,6 +88,8 @@ export interface FileRoutesByTo {
   '/inventory': typeof AppInventoryRoute
   '/products': typeof AppProductsRoute
   '/purchases': typeof AppPurchasesRoute
+  '/customers/$id': typeof AppCustomersIdRoute
+  '/sales/new': typeof AppSalesNewRoute
   '/customers': typeof AppCustomersIndexRoute
 }
 export interface FileRoutesById {
@@ -85,6 +101,8 @@ export interface FileRoutesById {
   '/_app/inventory': typeof AppInventoryRoute
   '/_app/products': typeof AppProductsRoute
   '/_app/purchases': typeof AppPurchasesRoute
+  '/_app/customers/$id': typeof AppCustomersIdRoute
+  '/_app/sales/new': typeof AppSalesNewRoute
   '/_app/customers/': typeof AppCustomersIndexRoute
 }
 export interface FileRouteTypes {
@@ -96,6 +114,8 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/products'
     | '/purchases'
+    | '/customers/$id'
+    | '/sales/new'
     | '/customers/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -105,6 +125,8 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/products'
     | '/purchases'
+    | '/customers/$id'
+    | '/sales/new'
     | '/customers'
   id:
     | '__root__'
@@ -115,6 +137,8 @@ export interface FileRouteTypes {
     | '/_app/inventory'
     | '/_app/products'
     | '/_app/purchases'
+    | '/_app/customers/$id'
+    | '/_app/sales/new'
     | '/_app/customers/'
   fileRoutesById: FileRoutesById
 }
@@ -182,6 +206,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCustomersIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/customers/$id': {
+      id: '/_app/customers/$id'
+      path: '/customers/$id'
+      fullPath: '/customers/$id'
+      preLoaderRoute: typeof AppCustomersIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/sales/new': {
+      id: '/_app/sales/new'
+      path: '/sales/new'
+      fullPath: '/sales/new'
+      preLoaderRoute: typeof AppSalesNewRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -190,6 +228,8 @@ interface AppRouteChildren {
   AppInventoryRoute: typeof AppInventoryRoute
   AppProductsRoute: typeof AppProductsRoute
   AppPurchasesRoute: typeof AppPurchasesRoute
+  AppCustomersIdRoute: typeof AppCustomersIdRoute
+  AppSalesNewRoute: typeof AppSalesNewRoute
   AppCustomersIndexRoute: typeof AppCustomersIndexRoute
 }
 
@@ -198,6 +238,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppInventoryRoute: AppInventoryRoute,
   AppProductsRoute: AppProductsRoute,
   AppPurchasesRoute: AppPurchasesRoute,
+  AppCustomersIdRoute: AppCustomersIdRoute,
+  AppSalesNewRoute: AppSalesNewRoute,
   AppCustomersIndexRoute: AppCustomersIndexRoute,
 }
 
