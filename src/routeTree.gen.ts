@@ -18,6 +18,7 @@ import { Route as AppProductsRouteImport } from './routes/_app.products'
 import { Route as AppPurchasesRouteImport } from './routes/_app.purchases'
 import { Route as AppCustomersIndexRouteImport } from './routes/_app.customers.index'
 import { Route as AppCustomersIdRouteImport } from './routes/_app.customers.$id'
+import { Route as AppSalesIndexRouteImport } from './routes/_app.sales.index'
 import { Route as AppSalesNewRouteImport } from './routes/_app.sales.new'
 
 const IndexRoute = IndexRouteImport.update({
@@ -64,6 +65,11 @@ const AppCustomersIdRoute = AppCustomersIdRouteImport.update({
   path: '/customers/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSalesIndexRoute = AppSalesIndexRouteImport.update({
+  id: '/sales/',
+  path: '/sales/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSalesNewRoute = AppSalesNewRouteImport.update({
   id: '/sales/new',
   path: '/sales/new',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/customers/$id': typeof AppCustomersIdRoute
   '/sales/new': typeof AppSalesNewRoute
   '/customers/': typeof AppCustomersIndexRoute
+  '/sales/': typeof AppSalesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/customers/$id': typeof AppCustomersIdRoute
   '/sales/new': typeof AppSalesNewRoute
   '/customers': typeof AppCustomersIndexRoute
+  '/sales': typeof AppSalesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/_app/customers/$id': typeof AppCustomersIdRoute
   '/_app/sales/new': typeof AppSalesNewRoute
   '/_app/customers/': typeof AppCustomersIndexRoute
+  '/_app/sales/': typeof AppSalesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/customers/$id'
     | '/sales/new'
     | '/customers/'
+    | '/sales/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/customers/$id'
     | '/sales/new'
     | '/customers'
+    | '/sales'
   id:
     | '__root__'
     | '/'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/_app/customers/$id'
     | '/_app/sales/new'
     | '/_app/customers/'
+    | '/_app/sales/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -213,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCustomersIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/sales/': {
+      id: '/_app/sales/'
+      path: '/sales'
+      fullPath: '/sales/'
+      preLoaderRoute: typeof AppSalesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/sales/new': {
       id: '/_app/sales/new'
       path: '/sales/new'
@@ -231,6 +250,7 @@ interface AppRouteChildren {
   AppCustomersIdRoute: typeof AppCustomersIdRoute
   AppSalesNewRoute: typeof AppSalesNewRoute
   AppCustomersIndexRoute: typeof AppCustomersIndexRoute
+  AppSalesIndexRoute: typeof AppSalesIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -241,6 +261,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCustomersIdRoute: AppCustomersIdRoute,
   AppSalesNewRoute: AppSalesNewRoute,
   AppCustomersIndexRoute: AppCustomersIndexRoute,
+  AppSalesIndexRoute: AppSalesIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

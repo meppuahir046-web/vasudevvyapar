@@ -11,7 +11,7 @@ import { useI18n } from "@/lib/i18n";
 import { fetchSales } from "@/lib/data";
 import { formatDate, money, num, presetRange, type DateRange, type RangePreset } from "@/lib/format";
 
-export const Route = createFileRoute("/_app/sales")({
+export const Route = createFileRoute("/_app/sales/")({
   head: () => ({
     meta: [
       { title: "Sales & Invoices — RetailBook" },
