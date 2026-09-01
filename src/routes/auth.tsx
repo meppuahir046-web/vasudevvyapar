@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { ensureProfile, saveSettings } from "@/lib/data";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/lib/i18n";
@@ -128,6 +129,24 @@ function AuthPage() {
               {mode === "in" ? t("auth.signIn") : mode === "up" ? t("auth.signUp") : t("auth.reset")}
             </Button>
           </form>
+
+          <div className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={busy}
+              onClick={async () => {
+                try {
+                  await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : t("common.error"));
+                }
+              }}
+            >
+              {t("auth.google")}
+            </Button>
+          </div>
 
           <div className="mt-4 flex flex-col gap-1 text-center text-sm">
             <button className="text-primary hover:underline" onClick={() => setMode(mode === "up" ? "in" : "up")}>

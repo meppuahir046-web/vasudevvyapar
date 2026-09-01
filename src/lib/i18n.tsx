@@ -86,6 +86,7 @@ const en: Dict = {
   "auth.signIn": "Sign in",
   "auth.signUp": "Create account",
   "auth.signOut": "Sign out",
+  "auth.google": "Continue with Google",
   "auth.email": "Email",
   "auth.password": "Password",
   "auth.forgot": "Forgot password?",
@@ -263,6 +264,7 @@ const en: Dict = {
 
   "settings.title": "Settings",
   "settings.business": "Business Details",
+  "settings.invoicing": "Invoicing & Branding",
   "settings.businessName": "Business Name",
   "settings.ownerName": "Owner Name",
   "settings.logo": "Logo URL",
@@ -384,6 +386,7 @@ const gu: Dict = {
   "auth.signIn": "લોગિન કરો",
   "auth.signUp": "એકાઉન્ટ બનાવો",
   "auth.signOut": "લોગઆઉટ",
+  "auth.google": "Google થી લોગિન કરો",
   "auth.email": "ઈમેલ",
   "auth.password": "પાસવર્ડ",
   "auth.forgot": "પાસવર્ડ ભૂલી ગયા?",
@@ -561,6 +564,7 @@ const gu: Dict = {
 
   "settings.title": "સેટિંગ્સ",
   "settings.business": "વ્યવસાય વિગતો",
+  "settings.invoicing": "ઇન્વૉઇસ અને બ્રાન્ડિંગ",
   "settings.businessName": "વ્યવસાયનું નામ",
   "settings.ownerName": "માલિકનું નામ",
   "settings.logo": "લોગો URL",
