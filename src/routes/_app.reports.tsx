@@ -96,7 +96,7 @@ function ReportsPage() {
     const map = new Map<string, { name: string; quantity: number; amount: number; profit: number }>();
     (items.data ?? []).forEach((it) => {
       const id = it.product_id;
-      const row = map.get(id) ?? { name: it.product_name ?? "—", quantity: 0, amount: 0, profit: 0 };
+      const row = map.get(id) ?? { name: it.products?.name ?? "—", quantity: 0, amount: 0, profit: 0 };
       row.quantity += num(it.quantity) - num(it.returned_quantity);
       row.amount += num(it.amount);
       row.profit += num(it.profit);
