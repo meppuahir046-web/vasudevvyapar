@@ -129,6 +129,24 @@ function AuthPage() {
             </Button>
           </form>
 
+          <div className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={busy}
+              onClick={async () => {
+                try {
+                  await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : t("common.error"));
+                }
+              }}
+            >
+              {t("auth.google")}
+            </Button>
+          </div>
+
           <div className="mt-4 flex flex-col gap-1 text-center text-sm">
             <button className="text-primary hover:underline" onClick={() => setMode(mode === "up" ? "in" : "up")}>
               {mode === "up" ? t("auth.haveAccount") : t("auth.needAccount")}
