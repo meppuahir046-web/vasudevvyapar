@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_app/settings")({
       { property: "og:description", content: "Configure invoice branding, language and demo data." },
     ],
   }),
-  component: SettingsPage;
+  component: SettingsPage,
 });
 
 type FormState = Partial<BusinessSettings>;
