@@ -126,11 +126,11 @@ function SettingsPage() {
           <CardContent className="space-y-3">
             {field("business_name", t("settings.businessName"))}
             {field("owner_name", t("settings.ownerName"))}
-            {field("phone", t("customers.mobile"))}
-            {field("whatsapp", t("customers.whatsapp"))}
+            {field("phone", t("common.mobile"))}
+            {field("whatsapp", t("common.whatsapp"))}
             {field("email", t("auth.email"), "email")}
-            {field("address", t("customers.address"))}
-            {field("city", t("customers.city"))}
+            {field("address", t("common.address"))}
+            {field("city", t("common.city"))}
             <Button onClick={() => save.mutate()} disabled={save.isPending}>
               {t("common.save")}
             </Button>
@@ -140,7 +140,7 @@ function SettingsPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t("invoice.title")}</CardTitle>
+              <CardTitle className="text-base">{t("settings.invoicePrefix")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {field("gst_number", t("settings.gst"))}
