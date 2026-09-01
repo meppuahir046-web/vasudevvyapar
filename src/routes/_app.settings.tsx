@@ -140,7 +140,7 @@ function SettingsPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t("settings.invoicePrefix")}</CardTitle>
+              <CardTitle className="text-base">{t("settings.invoicing")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {field("gst_number", t("settings.gst"))}

@@ -263,6 +263,7 @@ const en: Dict = {
 
   "settings.title": "Settings",
   "settings.business": "Business Details",
+  "settings.invoicing": "Invoicing & Branding",
   "settings.businessName": "Business Name",
   "settings.ownerName": "Owner Name",
   "settings.logo": "Logo URL",
@@ -561,6 +562,7 @@ const gu: Dict = {
 
   "settings.title": "સેટિંગ્સ",
   "settings.business": "વ્યવસાય વિગતો",
+  "settings.invoicing": "ઇન્વૉઇસ અને બ્રાન્ડિંગ",
   "settings.businessName": "વ્યવસાયનું નામ",
   "settings.ownerName": "માલિકનું નામ",
   "settings.logo": "લોગો URL",
