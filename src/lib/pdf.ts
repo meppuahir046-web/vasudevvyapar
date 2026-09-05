@@ -263,16 +263,56 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   if (unicode) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawText = (doc.text as any).bind(doc);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (doc as any).text = (txt: any, x: number, ty: number, opts?: any) => {
-      const s = Array.isArray(txt) ? txt.join(" ") : String(txt ?? "");
-      const needsUnicode = GUJARATI.test(s) || s.includes("\u20B9");
-      doc.setFont(needsUnicode ? font : "helvetica", needsUnicode ? "normal" : curStyle);
-      const out = rawText(txt, x, ty, opts);
-      doc.setFont(font, "normal");
+    const isUni = (c: string) => GUJARATI.test(c) || c === "\u20B9";
+    const segments = (s: string) => {
+      const out: { text: string; uni: boolean }[] = [];
+      for (const ch of s) {
+        const uni = isUni(ch);
+        const last = out[out.length - 1];
+        if (last && last.uni === uni) last.text += ch;
+        else out.push({ text: ch, uni });
+      }
       return out;
     };
+    const use = (uni: boolean) => doc.setFont(uni ? font : "helvetica", uni ? "normal" : curStyle);
+    const drawLine = (s: string, x: number, ty: number, align?: string) => {
+      const segs = segments(s);
+      if (segs.length <= 1) {
+        use(segs[0]?.uni ?? false);
+        rawText(s, x, ty, align ? { align } : undefined);
+        return;
+      }
+      const widths = segs.map((sg) => {
+        use(sg.uni);
+        return doc.getTextWidth(sg.text);
+      });
+      const total = widths.reduce((a, b) => a + b, 0);
+      let cx = align === "right" ? x - total : align === "center" ? x - total / 2 : x;
+      segs.forEach((sg, i) => {
+        use(sg.uni);
+        rawText(sg.text, cx, ty);
+        cx += widths[i] ?? 0;
+      });
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (doc as any).text = (txt: any, x: number, ty: number, opts?: any) => {
+      const lines: string[] = Array.isArray(txt) ? txt.map(String) : [String(txt ?? "")];
+      if (opts?.maxWidth) {
+        use(true);
+        const wrapped: string[] = [];
+        lines.forEach((l) => {
+          wrapped.push(...((doc.splitTextToSize(l, opts.maxWidth) as string[]) ?? [l]));
+        });
+        lines.length = 0;
+        lines.push(...wrapped);
+      }
+      const lh = doc.getLineHeight();
+      lines.forEach((l, i) => drawLine(l, x, ty + i * lh, opts?.align));
+      doc.setFont(font, "normal");
+      return doc;
+    };
   }
+
 
   const ink = () => doc.setTextColor(INK.r, INK.g, INK.b);
   const muted = () => doc.setTextColor(MUTED);
