@@ -610,18 +610,23 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
 
   if (data.customerOutstanding !== null && data.customerOutstanding !== undefined) {
     ensureSpace(30);
-    muted();
     doc.setFontSize(8.5);
-    doc.text(`${L.invoicePending}: `, M, ly);
+    const valX =
+      M +
+      Math.max(doc.getTextWidth(`${L.invoicePending}:`), doc.getTextWidth(`${L.customerOutstanding}:`)) +
+      12;
+    muted();
+    doc.text(`${L.invoicePending}:`, M, ly);
     ink();
-    doc.text(money(data.pending), M + 110, ly);
+    doc.text(money(data.pending), valX, ly);
     ly += 12;
     muted();
-    doc.text(`${L.customerOutstanding}: `, M, ly);
+    doc.text(`${L.customerOutstanding}:`, M, ly);
     ink();
-    doc.text(money(data.customerOutstanding), M + 110, ly);
+    doc.text(money(data.customerOutstanding), valX, ly);
     ly += 20;
   }
+
 
   if (data.notes && String(data.notes).trim()) {
     ensureSpace(32);
