@@ -1,22 +1,48 @@
-import type { InvoiceData } from "./pdf";
+import type { InvoiceLabels } from "./pdf";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
 
-export function invoiceLabels(t: T): InvoiceData["labels"] {
+export function invoiceLabels(t: T): InvoiceLabels {
   return {
-    invoice: t("invoices.title"),
+    invoice: t("common.invoice"),
     billTo: t("invoices.billTo"),
     date: t("invoices.date"),
+    time: t("invoices.time"),
+    dueDate: t("invoices.dueDate"),
+    no: t("invoices.no"),
     product: t("common.product"),
+    sku: t("invoices.sku"),
+    unit: t("common.unit"),
     qty: t("common.quantity"),
     rate: t("common.rate"),
     amount: t("common.amount"),
     subtotal: t("sales.subtotal"),
     discount: t("sales.discount"),
+    tax: t("invoices.tax"),
     total: t("sales.grandTotal"),
     paid: t("common.paid"),
     pending: t("common.pending"),
     gst: t("invoices.gst"),
+    mobile: t("common.mobile"),
+    whatsapp: t("common.whatsapp"),
+    email: t("auth.email"),
+    address: t("common.address"),
     thankYou: t("invoices.thankYou"),
+    invoiceNo: t("invoices.invoiceNo"),
+    paymentStatus: t("invoices.paymentStatus"),
+    statusPaid: t("invoices.status.paid"),
+    statusPartial: t("invoices.status.partial"),
+    statusPending: t("invoices.status.pending"),
+    paymentDetails: t("invoices.paymentDetails"),
+    method: t("payments.method"),
+    reference: t("invoices.reference"),
+    invoicePending: t("invoices.invoicePending"),
+    customerOutstanding: t("invoices.customerOutstanding"),
+    notes: t("common.notes"),
+    terms: t("invoices.terms"),
+    termLines: [t("invoices.term1"), t("invoices.term2"), t("invoices.term3")],
+    page: (current, total) => t("invoices.page", { current, total }),
+    waMessage: (v) => t("invoices.waMessage", v),
+    cancelled: t("invoices.cancelled"),
   };
 }
