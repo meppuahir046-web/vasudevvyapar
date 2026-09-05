@@ -253,8 +253,27 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   const M = 42;
   const CW = W - M * 2;
 
-  const setFont = (style: "normal" | "bold" = "normal") =>
-    doc.setFont(font, unicode ? "normal" : style);
+  // The Gujarati unicode font has no Latin glyphs, so pick the font per string:
+  // Latin-only strings keep helvetica (with bold), Gujarati/₹ strings use the unicode font.
+  let curStyle: "normal" | "bold" = "normal";
+  const setFont = (style: "normal" | "bold" = "normal") => {
+    curStyle = style;
+    doc.setFont(unicode ? font : "helvetica", unicode ? "normal" : style);
+  };
+  if (unicode) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawText = (doc.text as any).bind(doc);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (doc as any).text = (txt: any, x: number, ty: number, opts?: any) => {
+      const s = Array.isArray(txt) ? txt.join(" ") : String(txt ?? "");
+      const needsUnicode = GUJARATI.test(s) || s.includes("\u20B9");
+      doc.setFont(needsUnicode ? font : "helvetica", needsUnicode ? "normal" : curStyle);
+      const out = rawText(txt, x, ty, opts);
+      doc.setFont(font, "normal");
+      return out;
+    };
+  }
+
   const ink = () => doc.setTextColor(INK.r, INK.g, INK.b);
   const muted = () => doc.setTextColor(MUTED);
 
