@@ -33,7 +33,14 @@ import {
   type PaymentMethod,
 } from "@/lib/data";
 import { formatDate, money, num, qty, toISODate } from "@/lib/format";
-import { downloadInvoicePdf, saleToInvoice, shareInvoice } from "@/lib/pdf";
+import {
+  downloadInvoicePdf,
+  invoiceWhatsappMessage,
+  printInvoicePdf,
+  saleToInvoice,
+  shareInvoice,
+} from "@/lib/pdf";
+
 import { invoiceLabels } from "@/lib/invoice-labels";
 
 export const Route = createFileRoute("/_app/sales/$id")({
