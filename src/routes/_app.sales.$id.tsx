@@ -137,7 +137,13 @@ function SaleDetailPage() {
           ? ("partial" as const)
           : ("unpaid" as const);
 
-  const invoice = () => saleToInvoice(s, settings.data ?? null, invoiceLabels(t));
+  const invoice = () =>
+    saleToInvoice(s, settings.data ?? null, invoiceLabels(t), {
+      payments: payments.data ?? [],
+      customerOutstanding: null,
+      methodLabel: (m) => t(`payments.method.${m}`),
+      unitLabel: (u) => t(`unit.${u}`),
+    });
 
   const onDownload = async () => {
     try {
@@ -148,14 +154,23 @@ function SaleDetailPage() {
     }
   };
 
-  const onShare = async () => {
+  const onPrint = async () => {
     try {
-      const message = t("invoices.shareText", { invoice: s.invoice_no, amount: money(s.total) });
-      await shareInvoice(invoice(), message, s.customers?.whatsapp ?? s.customers?.mobile ?? null);
+      await printInvoicePdf(invoice());
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
+
+  const onShare = async () => {
+    try {
+      const data = invoice();
+      await shareInvoice(data, invoiceWhatsappMessage(data, money), s.customers?.whatsapp ?? s.customers?.mobile ?? null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.error"));
+    }
+  };
+
 
   return (
     <div>
