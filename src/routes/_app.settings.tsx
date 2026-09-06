@@ -41,7 +41,13 @@ function SettingsPage() {
   const [pw1, setPw1] = useState("");
   const [pw2, setPw2] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
-  const recovery = typeof window !== "undefined" && window.location.search.includes("recovery=1");
+  const [recovery, setRecovery] = useState(false);
+
+  useEffect(() => {
+    if (!window.location.search.includes("recovery=1")) return;
+    setRecovery(true);
+    document.getElementById("password")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
 
   const updatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
