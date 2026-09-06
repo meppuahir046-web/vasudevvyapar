@@ -12,6 +12,7 @@ import { Loading, PageHeader } from "@/components/ui-bits";
 import { useI18n } from "@/lib/i18n";
 import { fetchSettings, resetDemoData, saveSettings, seedDemoData, type BusinessSettings } from "@/lib/data";
 import { signOut } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({
@@ -37,6 +38,35 @@ function SettingsPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState>({});
   const [dark, setDark] = useState(false);
+  const [pw1, setPw1] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+  const recovery = typeof window !== "undefined" && window.location.search.includes("recovery=1");
+
+  const updatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pw1.length < 6) {
+      toast.error(t("auth.passwordShort"));
+      return;
+    }
+    if (pw1 !== pw2) {
+      toast.error(t("auth.passwordMismatch"));
+      return;
+    }
+    setPwBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: pw1 });
+      if (error) throw error;
+      setPw1("");
+      setPw2("");
+      toast.success(t("auth.passwordUpdated"));
+      navigate({ to: "/dashboard" });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("common.error"));
+    } finally {
+      setPwBusy(false);
+    }
+  };
 
   const settings = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
 
@@ -65,6 +95,7 @@ function SettingsPage() {
         whatsapp: form.whatsapp ?? null,
         email: form.email ?? null,
         gst_number: form.gst_number ?? null,
+        business_tagline: form.business_tagline ?? null,
         logo_url: form.logo_url ?? null,
         invoice_prefix: (form.invoice_prefix ?? "INV").trim() || "INV",
         currency: form.currency ?? "INR",
@@ -147,6 +178,7 @@ function SettingsPage() {
               {field("invoice_prefix", t("settings.invoicePrefix"))}
               {field("currency", t("settings.currency"))}
               {field("logo_url", t("settings.logo"))}
+            {field("business_tagline", t("settings.tagline"))}
               <div>
                 <Label htmlFor="invoice_footer">{t("settings.invoiceFooter")}</Label>
                 <Textarea
@@ -158,6 +190,28 @@ function SettingsPage() {
               <Button onClick={() => save.mutate()} disabled={save.isPending}>
                 {t("common.save")}
               </Button>
+            </CardContent>
+          </Card>
+
+          <Card id="password" className={recovery ? "border-primary" : undefined}>
+            <CardHeader>
+              <CardTitle className="text-base">{t("auth.setNewPassword")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={updatePassword} className="space-y-3">
+                <p className="text-sm text-muted-foreground">{t("auth.setNewPasswordHelp")}</p>
+                <div>
+                  <Label htmlFor="pw1">{t("auth.newPassword")}</Label>
+                  <Input id="pw1" type="password" minLength={6} value={pw1} onChange={(e) => setPw1(e.target.value)} required />
+                </div>
+                <div>
+                  <Label htmlFor="pw2">{t("auth.confirmPassword")}</Label>
+                  <Input id="pw2" type="password" minLength={6} value={pw2} onChange={(e) => setPw2(e.target.value)} required />
+                </div>
+                <Button type="submit" disabled={pwBusy}>
+                  {t("auth.updatePassword")}
+                </Button>
+              </form>
             </CardContent>
           </Card>
 
