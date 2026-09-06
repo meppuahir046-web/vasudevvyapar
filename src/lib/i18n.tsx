@@ -258,7 +258,6 @@ const en: Dict = {
   "invoices.page": "Page {current} of {total}",
   "invoices.cancelled": "Cancelled",
   "invoices.print": "Print",
-  "invoices.preview": "Preview",
   "invoices.openPdf": "Open PDF in new tab",
   "invoices.previewHint": "Pinch to zoom. Use Download or Open PDF if the preview does not load on your phone.",
   "invoices.waMessage":
@@ -594,7 +593,6 @@ const gu: Dict = {
   "invoices.page": "પાનું {current} / {total}",
   "invoices.cancelled": "રદ કરેલ",
   "invoices.print": "પ્રિન્ટ",
-  "invoices.preview": "પ્રીવ્યૂ",
   "invoices.openPdf": "PDF નવી ટૅબમાં ખોલો",
   "invoices.previewHint": "ઝૂમ કરવા પિંચ કરો. ફોનમાં પ્રીવ્યૂ ન દેખાય તો ડાઉનલોડ કે PDF ખોલો વાપરો.",
   "invoices.waMessage":
