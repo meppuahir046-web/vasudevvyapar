@@ -1,7 +1,7 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Download, Printer, Share2 } from "lucide-react";
+import { Download, Eye, ExternalLink, Printer, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ import {
 import { formatDate, money, num, qty, toISODate } from "@/lib/format";
 import {
   downloadInvoicePdf,
+  invoiceBlobUrl,
   invoiceWhatsappMessage,
   printInvoicePdf,
   saleToInvoice,
@@ -69,6 +70,10 @@ function SaleDetailPage() {
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<PaymentMethod>("CASH");
   const [reference, setReference] = useState("");
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewBusy, setPreviewBusy] = useState(false);
 
   const [returnOpen, setReturnOpen] = useState(false);
   const [returnQty, setReturnQty] = useState<Record<string, string>>({});
@@ -169,6 +174,23 @@ function SaleDetailPage() {
     }
   };
 
+  const onPreview = async () => {
+    setPreviewOpen(true);
+    setPreviewBusy(true);
+    try {
+      const url = await invoiceBlobUrl(invoice());
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return url;
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.error"));
+      setPreviewOpen(false);
+    } finally {
+      setPreviewBusy(false);
+    }
+  };
+
   const onShare = async () => {
     try {
       const data = invoice();
@@ -186,6 +208,9 @@ function SaleDetailPage() {
         subtitle={`${formatDate(s.sale_date)} · ${s.customers?.name ?? "-"}`}
         actions={
           <>
+            <Button variant="outline" size="sm" onClick={onPreview}>
+              <Eye className="mr-1 size-4" /> {t("invoices.preview")}
+            </Button>
             <Button variant="outline" size="sm" onClick={onDownload}>
               <Download className="mr-1 size-4" /> {t("invoices.download")}
             </Button>
@@ -305,6 +330,52 @@ function SaleDetailPage() {
           </>
         }
       />
+
+      <Dialog
+        open={previewOpen}
+        onOpenChange={(o) => {
+          setPreviewOpen(o);
+          if (!o && previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
+          }
+        }}
+      >
+        <DialogContent className="flex h-[92vh] max-h-[92vh] w-[calc(100vw-1.5rem)] max-w-3xl flex-col gap-3 p-3 sm:p-6">
+          <DialogHeader className="space-y-1 text-left">
+            <DialogTitle className="text-base">
+              {t("invoices.preview")} · {s.invoice_no}
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground">{t("invoices.previewHint")}</p>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-hidden rounded-md border bg-muted">
+            {previewBusy || !previewUrl ? (
+              <Loading />
+            ) : (
+              <object data={previewUrl} type="application/pdf" className="h-full w-full">
+                <iframe src={previewUrl} title={s.invoice_no} className="h-full w-full" />
+              </object>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              disabled={!previewUrl}
+              onClick={() => previewUrl && window.open(previewUrl, "_blank", "noopener")}
+            >
+              <ExternalLink className="mr-1 size-4" /> {t("invoices.openPdf")}
+            </Button>
+            <Button variant="outline" size="sm" className="flex-1" onClick={onDownload}>
+              <Download className="mr-1 size-4" /> {t("invoices.download")}
+            </Button>
+            <Button size="sm" className="flex-1" onClick={onShare}>
+              <Share2 className="mr-1 size-4" /> {t("invoices.shareWhatsapp")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">

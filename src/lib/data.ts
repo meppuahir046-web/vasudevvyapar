@@ -165,6 +165,7 @@ export type BusinessSettings = {
   owner_id: string;
   business_name: string;
   owner_name: string | null;
+  business_tagline: string | null;
   address: string | null;
   city: string | null;
   phone: string | null;
