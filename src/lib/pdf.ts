@@ -177,6 +177,7 @@ export function saleToInvoice(
     status: statusOf(sale),
     cancelled: sale.status === "CANCELLED",
     business: settings,
+    businessTagline: settings?.business_tagline ?? null,
     customer: {
       name: c.name ?? "-",
       mobile: c.mobile ?? null,
