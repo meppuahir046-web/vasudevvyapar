@@ -35,6 +35,14 @@ export const Route = createFileRoute("/_app/dashboard")({
   component: DashboardPage,
 });
 
+function compact(v: number) {
+  const a = Math.abs(v);
+  if (a >= 1e7) return `${(v / 1e7).toFixed(1)}Cr`;
+  if (a >= 1e5) return `${(v / 1e5).toFixed(1)}L`;
+  if (a >= 1e3) return `${Math.round(v / 1e3)}K`;
+  return String(Math.round(v));
+}
+
 function DashboardPage() {
   const { t } = useI18n();
   const inventory = useQuery({ queryKey: ["inventory"], queryFn: fetchInventory });
@@ -100,7 +108,7 @@ function DashboardPage() {
         </Link>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <StatCard label={t("dashboard.todaySales")} value={money(sum(todaySales.map((s) => num(s.total))))} />
         <StatCard
           label={t("dashboard.todayProfit")}
@@ -127,43 +135,51 @@ function DashboardPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t("dashboard.monthlySales")}</CardTitle>
+        <Card className="min-w-0 overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm lg:text-base">{t("dashboard.monthlySales")}</CardTitle>
           </CardHeader>
-          <CardContent className="h-64">
+          <CardContent className="h-52 px-1 pb-3 sm:px-4 lg:h-64">
             {monthly.length === 0 ? (
               <EmptyState />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthly}>
+                <LineChart data={monthly} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="label" fontSize={11} />
-                  <YAxis fontSize={11} />
+                  <XAxis dataKey="label" fontSize={10} tickMargin={4} />
+                  <YAxis fontSize={10} width={44} tickFormatter={(v: number) => compact(v)} />
                   <Tooltip formatter={(v: number) => money(v)} />
-                  <Line type="monotone" dataKey="sales" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="profit" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="sales" stroke="var(--primary)" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="profit" stroke="var(--chart-2)" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t("dashboard.productSales")}</CardTitle>
+        <Card className="min-w-0 overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm lg:text-base">{t("dashboard.productSales")}</CardTitle>
           </CardHeader>
-          <CardContent className="h-64">
+          <CardContent className="h-52 px-1 pb-3 sm:px-4 lg:h-64">
             {productSales.length === 0 ? (
               <EmptyState />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={productSales}>
+                <BarChart data={productSales} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="name" fontSize={10} interval={0} angle={-20} textAnchor="end" height={50} />
-                  <YAxis fontSize={11} />
+                  <XAxis
+                    dataKey="name"
+                    fontSize={9}
+                    interval={0}
+                    angle={-25}
+                    textAnchor="end"
+                    height={52}
+                    tickFormatter={(v: string) => (v.length > 9 ? `${v.slice(0, 8)}…` : v)}
+                  />
+                  <YAxis fontSize={10} width={44} tickFormatter={(v: number) => compact(v)} />
                   <Tooltip formatter={(v: number) => money(v)} />
-                  <Bar dataKey="amount" fill="hsl(var(--primary))" radius={4} />
+                  <Bar dataKey="amount" fill="var(--primary)" radius={4} />
                 </BarChart>
               </ResponsiveContainer>
             )}

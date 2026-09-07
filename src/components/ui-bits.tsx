@@ -51,14 +51,16 @@ export function StatCard({
           ? "text-destructive"
           : "text-foreground";
   return (
-    <Card>
-      <CardContent className="flex items-start justify-between gap-2 p-4">
+    <Card className="min-w-0">
+      <CardContent className="flex items-start justify-between gap-2 p-3 lg:p-4">
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-          <p className={cn("mt-1 text-lg font-bold lg:text-xl", toneClass)}>{value}</p>
-          {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+          <p className="truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground lg:text-xs">
+            {label}
+          </p>
+          <p className={cn("mt-0.5 truncate text-base font-bold lg:text-xl", toneClass)}>{value}</p>
+          {hint && <p className="mt-0.5 truncate text-[10px] text-muted-foreground lg:text-xs">{hint}</p>}
         </div>
-        {icon && <div className="rounded-md bg-muted p-2 text-muted-foreground">{icon}</div>}
+        {icon && <div className="hidden shrink-0 rounded-md bg-muted p-2 text-muted-foreground sm:block">{icon}</div>}
       </CardContent>
     </Card>
   );
@@ -87,8 +89,8 @@ export function RangeFilter({
 }) {
   const { t } = useI18n();
   return (
-    <div className="flex flex-wrap items-end gap-2">
-      <div className="w-40">
+    <div className="grid w-full min-w-0 grid-cols-2 items-end gap-2 sm:flex sm:w-auto sm:flex-wrap">
+      <div className="col-span-2 min-w-0 sm:w-40">
         <Label className="text-xs text-muted-foreground">{t("common.filter")}</Label>
         <Select
           value={preset}
@@ -110,17 +112,23 @@ export function RangeFilter({
           </SelectContent>
         </Select>
       </div>
-      <div>
+      <div className="min-w-0">
         <Label className="text-xs text-muted-foreground">{t("common.from")}</Label>
         <Input
           type="date"
+          className="w-full"
           value={range.from}
           onChange={(e) => onChange("custom", { ...range, from: e.target.value })}
         />
       </div>
-      <div>
+      <div className="min-w-0">
         <Label className="text-xs text-muted-foreground">{t("common.to")}</Label>
-        <Input type="date" value={range.to} onChange={(e) => onChange("custom", { ...range, to: e.target.value })} />
+        <Input
+          type="date"
+          className="w-full"
+          value={range.to}
+          onChange={(e) => onChange("custom", { ...range, to: e.target.value })}
+        />
       </div>
     </div>
   );
