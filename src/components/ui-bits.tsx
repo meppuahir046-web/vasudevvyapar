@@ -89,8 +89,8 @@ export function RangeFilter({
 }) {
   const { t } = useI18n();
   return (
-    <div className="flex flex-wrap items-end gap-2">
-      <div className="w-40">
+    <div className="grid w-full min-w-0 grid-cols-2 items-end gap-2 sm:flex sm:w-auto sm:flex-wrap">
+      <div className="col-span-2 min-w-0 sm:w-40">
         <Label className="text-xs text-muted-foreground">{t("common.filter")}</Label>
         <Select
           value={preset}
@@ -112,17 +112,23 @@ export function RangeFilter({
           </SelectContent>
         </Select>
       </div>
-      <div>
+      <div className="min-w-0">
         <Label className="text-xs text-muted-foreground">{t("common.from")}</Label>
         <Input
           type="date"
+          className="w-full"
           value={range.from}
           onChange={(e) => onChange("custom", { ...range, from: e.target.value })}
         />
       </div>
-      <div>
+      <div className="min-w-0">
         <Label className="text-xs text-muted-foreground">{t("common.to")}</Label>
-        <Input type="date" value={range.to} onChange={(e) => onChange("custom", { ...range, to: e.target.value })} />
+        <Input
+          type="date"
+          className="w-full"
+          value={range.to}
+          onChange={(e) => onChange("custom", { ...range, to: e.target.value })}
+        />
       </div>
     </div>
   );
