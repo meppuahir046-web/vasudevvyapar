@@ -35,6 +35,14 @@ export const Route = createFileRoute("/_app/dashboard")({
   component: DashboardPage,
 });
 
+function compact(v: number) {
+  const a = Math.abs(v);
+  if (a >= 1e7) return `${(v / 1e7).toFixed(1)}Cr`;
+  if (a >= 1e5) return `${(v / 1e5).toFixed(1)}L`;
+  if (a >= 1e3) return `${Math.round(v / 1e3)}K`;
+  return String(Math.round(v));
+}
+
 function DashboardPage() {
   const { t } = useI18n();
   const inventory = useQuery({ queryKey: ["inventory"], queryFn: fetchInventory });
