@@ -51,14 +51,16 @@ export function StatCard({
           ? "text-destructive"
           : "text-foreground";
   return (
-    <Card>
-      <CardContent className="flex items-start justify-between gap-2 p-4">
+    <Card className="min-w-0">
+      <CardContent className="flex items-start justify-between gap-2 p-3 lg:p-4">
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-          <p className={cn("mt-1 text-lg font-bold lg:text-xl", toneClass)}>{value}</p>
-          {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+          <p className="truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground lg:text-xs">
+            {label}
+          </p>
+          <p className={cn("mt-0.5 truncate text-base font-bold lg:text-xl", toneClass)}>{value}</p>
+          {hint && <p className="mt-0.5 truncate text-[10px] text-muted-foreground lg:text-xs">{hint}</p>}
         </div>
-        {icon && <div className="rounded-md bg-muted p-2 text-muted-foreground">{icon}</div>}
+        {icon && <div className="hidden shrink-0 rounded-md bg-muted p-2 text-muted-foreground sm:block">{icon}</div>}
       </CardContent>
     </Card>
   );
