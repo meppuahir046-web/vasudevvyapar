@@ -375,8 +375,13 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
     setFont("bold");
     doc.setFontSize(compact ? 13 : 18);
     doc.setTextColor(BRAND.r, BRAND.g, BRAND.b);
-    doc.text(data.business?.business_name || "Invoice", textX, y + (compact ? 12 : 16));
-    let iy = y + (compact ? 26 : 32);
+    const nameW = Math.max(120, W - M - textX - (compact ? 150 : 170));
+    const nameLines = doc.splitTextToSize(data.business?.business_name || "Invoice", nameW) as string[];
+    const nameLH = compact ? 15 : 20;
+    nameLines.forEach((ln, i) => {
+      doc.text(ln, textX, y + (compact ? 12 : 16) + i * nameLH);
+    });
+    let iy = y + (compact ? 12 : 16) + (nameLines.length - 1) * nameLH + (compact ? 14 : 18);
 
     if (!compact) {
       ink();
@@ -384,7 +389,8 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
       doc.setFontSize(9);
       if (data.businessTagline) {
         muted();
-        doc.text(data.businessTagline, textX, iy - 12);
+        doc.text(data.businessTagline, textX, iy, { maxWidth: nameW });
+        iy += 14;
       }
       muted();
       const contact = [
