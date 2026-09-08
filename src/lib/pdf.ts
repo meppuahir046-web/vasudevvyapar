@@ -763,11 +763,24 @@ export async function invoiceBlobUrl(data: InvoiceData): Promise<string> {
 
 export async function downloadInvoicePdf(data: InvoiceData) {
   const doc = await buildInvoicePdf(data);
-  doc.save(invoiceFileName(data));
+  const name = invoiceFileName(data);
+  const bridge = androidBridge();
+  if (bridge?.saveFile) {
+    const b64 = await blobToBase64(doc.output("blob") as Blob);
+    bridge.saveFile(b64, name, MIME.pdf);
+    return;
+  }
+  doc.save(name);
 }
 
 export async function printInvoicePdf(data: InvoiceData) {
   const doc = await buildInvoicePdf(data);
+  const bridge = androidBridge();
+  if (bridge?.printFile) {
+    const b64 = await blobToBase64(doc.output("blob") as Blob);
+    bridge.printFile(b64, invoiceFileName(data));
+    return;
+  }
   const url = URL.createObjectURL(doc.output("blob") as Blob);
   const frame = document.createElement("iframe");
   frame.style.position = "fixed";
@@ -788,12 +801,27 @@ export async function printInvoicePdf(data: InvoiceData) {
   };
 }
 
-export async function shareInvoice(data: InvoiceData, message: string, whatsappNumber?: string | null) {
+export async function shareInvoice(
+  data: InvoiceData,
+  message: string,
+  whatsappNumber?: string | null,
+  target: "sheet" | "whatsapp" = "sheet",
+) {
   const doc = await buildInvoicePdf(data);
   const blob = doc.output("blob") as Blob;
   const name = invoiceFileName(data);
-  const file = new File([blob], name, { type: "application/pdf" });
 
+  const digits = (whatsappNumber ?? "").replace(/\D/g, "");
+  const phone = digits ? (digits.length > 10 ? digits : `91${digits}`) : "";
+
+  const bridge = androidBridge();
+  if (bridge?.shareFile) {
+    const b64 = await blobToBase64(blob);
+    bridge.shareFile(b64, name, MIME.pdf, message, target, phone);
+    return "shared" as const;
+  }
+
+  const file = new File([blob], name, { type: MIME.pdf });
   const nav = navigator as Navigator & {
     canShare?: (d: { files?: File[] }) => boolean;
     share?: (d: { files?: File[]; text?: string; title?: string }) => Promise<void>;
@@ -809,10 +837,10 @@ export async function shareInvoice(data: InvoiceData, message: string, whatsappN
   }
 
   doc.save(name);
-  const digits = (whatsappNumber ?? "").replace(/\D/g, "");
-  const url = digits
-    ? `https://wa.me/${digits.length > 10 ? digits : `91${digits}`}?text=${encodeURIComponent(message)}`
+  const url = phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
     : `https://wa.me/?text=${encodeURIComponent(message)}`;
   window.open(url, "_blank", "noopener");
   return "downloaded" as const;
 }
+
