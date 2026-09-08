@@ -239,5 +239,12 @@ export async function exportWorkbook(range: DateRange, fileLabel: string) {
     },
   ]);
 
-  XLSX.writeFile(wb, `RetailBook-${fileLabel}.xlsx`);
+  const name = `RetailBook-${fileLabel}.xlsx`;
+  const bridge = androidBridge();
+  if (bridge?.saveFile) {
+    bridge.saveFile(XLSX.write(wb, { type: "base64", bookType: "xlsx" }) as string, name, MIME.xlsx);
+    return;
+  }
+  XLSX.writeFile(wb, name);
 }
+
