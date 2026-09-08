@@ -191,14 +191,20 @@ function SaleDetailPage() {
     }
   };
 
-  const onShare = async () => {
+  const onShare = async (target: "sheet" | "whatsapp" = "whatsapp") => {
     try {
       const data = invoice();
-      await shareInvoice(data, invoiceWhatsappMessage(data, money), s.customers?.whatsapp ?? s.customers?.mobile ?? null);
+      await shareInvoice(
+        data,
+        invoiceWhatsappMessage(data, money),
+        s.customers?.whatsapp ?? s.customers?.mobile ?? null,
+        target,
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
+
 
 
   return (
@@ -218,9 +224,13 @@ function SaleDetailPage() {
               <Printer className="mr-1 size-4" /> {t("invoices.print")}
             </Button>
 
-            <Button variant="outline" size="sm" onClick={onShare}>
+            <Button variant="outline" size="sm" onClick={() => void onShare("sheet")}>
+              <Share2 className="mr-1 size-4" /> {t("invoices.share")}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => void onShare("whatsapp")}>
               <Share2 className="mr-1 size-4" /> {t("invoices.shareWhatsapp")}
             </Button>
+
             {s.status === "ACTIVE" && (
               <>
                 <Dialog open={payOpen} onOpenChange={setPayOpen}>
@@ -370,7 +380,7 @@ function SaleDetailPage() {
             <Button variant="outline" size="sm" className="flex-1" onClick={onDownload}>
               <Download className="mr-1 size-4" /> {t("invoices.download")}
             </Button>
-            <Button size="sm" className="flex-1" onClick={onShare}>
+            <Button size="sm" className="flex-1" onClick={() => void onShare("whatsapp")}>
               <Share2 className="mr-1 size-4" /> {t("invoices.shareWhatsapp")}
             </Button>
           </div>
