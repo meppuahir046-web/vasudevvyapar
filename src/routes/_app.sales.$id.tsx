@@ -224,9 +224,13 @@ function SaleDetailPage() {
               <Printer className="mr-1 size-4" /> {t("invoices.print")}
             </Button>
 
-            <Button variant="outline" size="sm" onClick={onShare}>
+            <Button variant="outline" size="sm" onClick={() => void onShare("sheet")}>
+              <Share2 className="mr-1 size-4" /> {t("invoices.share")}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => void onShare("whatsapp")}>
               <Share2 className="mr-1 size-4" /> {t("invoices.shareWhatsapp")}
             </Button>
+
             {s.status === "ACTIVE" && (
               <>
                 <Dialog open={payOpen} onOpenChange={setPayOpen}>
