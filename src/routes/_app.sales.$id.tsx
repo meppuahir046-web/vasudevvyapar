@@ -380,7 +380,7 @@ function SaleDetailPage() {
             <Button variant="outline" size="sm" className="flex-1" onClick={onDownload}>
               <Download className="mr-1 size-4" /> {t("invoices.download")}
             </Button>
-            <Button size="sm" className="flex-1" onClick={onShare}>
+            <Button size="sm" className="flex-1" onClick={() => void onShare("whatsapp")}>
               <Share2 className="mr-1 size-4" /> {t("invoices.shareWhatsapp")}
             </Button>
           </div>
