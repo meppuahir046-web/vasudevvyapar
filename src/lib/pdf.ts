@@ -1,6 +1,8 @@
 import { jsPDF } from "jspdf";
 import { formatDate, qty } from "./format";
 import type { BusinessSettings, PaymentRow, SaleRow } from "./data";
+import { MIME, androidBridge, blobToBase64 } from "./native-bridge";
+
 
 const GUJARATI = /[\u0A80-\u0AFF]/;
 const FONT_URL =
