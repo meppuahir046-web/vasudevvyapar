@@ -191,14 +191,20 @@ function SaleDetailPage() {
     }
   };
 
-  const onShare = async () => {
+  const onShare = async (target: "sheet" | "whatsapp" = "whatsapp") => {
     try {
       const data = invoice();
-      await shareInvoice(data, invoiceWhatsappMessage(data, money), s.customers?.whatsapp ?? s.customers?.mobile ?? null);
+      await shareInvoice(
+        data,
+        invoiceWhatsappMessage(data, money),
+        s.customers?.whatsapp ?? s.customers?.mobile ?? null,
+        target,
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
+
 
 
   return (
