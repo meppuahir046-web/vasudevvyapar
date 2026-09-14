@@ -88,6 +88,14 @@ export function monthLabel(key: string): string {
   return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
 }
 
+export function monthRange(startMonth: string, endMonth: string): DateRange {
+  const from = `${startMonth}-01`;
+  const [y, m] = endMonth.split("-").map(Number);
+  const lastDay = new Date(y!, m!, 0).getDate();
+  const to = `${endMonth}-${String(lastDay).padStart(2, "0")}`;
+  return { from, to };
+}
+
 export function paymentStatus(total: number, paid: number): "paid" | "partial" | "unpaid" {
   if (paid >= total - 0.009) return "paid";
   if (paid > 0) return "partial";

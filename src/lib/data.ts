@@ -113,6 +113,7 @@ export type SaleRow = {
   status: "ACTIVE" | "CANCELLED";
   notes: string | null;
   created_at: string;
+  updated_at: string;
   customers?: { name: string; mobile: string | null; whatsapp: string | null } | null;
   sale_items?: SaleItemRow[];
 };
@@ -130,6 +131,38 @@ export type SaleItemRow = {
   cost_total: number;
   profit: number;
   products?: { name: string; sku: string | null } | null;
+};
+
+export type SaleReturnItemRow = {
+  id: string;
+  return_id: string;
+  sale_item_id: string;
+  product_id: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+  unit_cost: number;
+  products?: { name: string; sku: string | null } | null;
+  sale_items?: { quantity: number; returned_quantity: number; unit: Unit; rate: number } | null;
+};
+
+export type SaleReturnRow = {
+  id: string;
+  sale_id: string;
+  customer_id: string;
+  return_date: string;
+  total_amount: number;
+  total_cost: number;
+  notes: string | null;
+  customers?: { name: string; mobile: string | null; address: string | null; city: string | null } | null;
+  sales?: {
+    invoice_no: string;
+    sale_date: string;
+    total: number;
+    paid_amount: number;
+    pending_amount: number;
+  } | null;
+  sale_return_items?: SaleReturnItemRow[];
 };
 
 export type PaymentRow = {
@@ -224,6 +257,10 @@ export async function fetchProducts(includeInactive = true): Promise<ProductRow[
 
 export async function fetchInventory(): Promise<InventoryRow[]> {
   return unwrap<InventoryRow[]>(await db.from("v_product_inventory").select("*").order("name"));
+}
+
+export async function fetchProduct(id: string): Promise<ProductRow> {
+  return unwrap(await db.from("products").select("*").eq("id", id).single());
 }
 
 export async function saveProduct(p: Partial<ProductRow> & { name: string }) {
@@ -389,6 +426,7 @@ export async function fetchSaleItems(opts: { range?: DateRange; productId?: stri
     .order("created_at", { ascending: false });
   if (opts.productId) q = q.eq("product_id", opts.productId);
   if (opts.customerId) q = q.eq("sales.customer_id", opts.customerId);
+  q = q.eq("sales.status", "ACTIVE");
   if (opts.range) q = q.gte("sales.sale_date", opts.range.from).lte("sales.sale_date", opts.range.to);
   return unwrap<
     (SaleItemRow & {
@@ -496,6 +534,18 @@ export async function fetchReturns(range?: DateRange) {
       sale_return_items?: any[];
     }[]
   >(await q);
+}
+
+export async function fetchSaleReturn(id: string): Promise<SaleReturnRow> {
+  return unwrap(
+    await db
+      .from("sale_returns")
+      .select(
+        "*, customers(name, mobile, address, city), sales(invoice_no, sale_date, total, paid_amount, pending_amount), sale_return_items(*, products(name, sku), sale_items(quantity, returned_quantity, unit, rate))",
+      )
+      .eq("id", id)
+      .single(),
+  );
 }
 
 /* ---------------- demo data ---------------- */

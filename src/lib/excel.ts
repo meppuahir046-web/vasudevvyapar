@@ -24,7 +24,7 @@ function addSheets(wb: XLSX.WorkBook, sheets: Sheet[]) {
   });
 }
 
-export async function exportWorkbook(range: DateRange, fileLabel: string) {
+export async function exportWorkbook(range: DateRange, fileLabel: string, delivery: "download" | "share" = "download") {
   const [settings, products, inventory, purchases, sales, saleItems, payments, customers, returns, ledger] =
     await Promise.all([
       fetchSettings(),
@@ -243,10 +243,28 @@ export async function exportWorkbook(range: DateRange, fileLabel: string) {
 
   const name = `RetailBook-${fileLabel}.xlsx`;
   const bridge = androidBridge();
-  if (bridge?.saveFile) {
-    bridge.saveFile(XLSX.write(wb, { type: "base64", bookType: "xlsx" }) as string, name, MIME.xlsx);
+  const base64 = XLSX.write(wb, { type: "base64", bookType: "xlsx" }) as string;
+  if (bridge?.shareFile && delivery === "share") {
+    bridge.shareFile(base64, name, MIME.xlsx, name, "sheet", "");
     return;
   }
+  if (bridge?.saveFile) {
+    bridge.saveFile(base64, name, MIME.xlsx);
+    return;
+  }
+  if (delivery === "share") {
+    const bytes = XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+    const file = new File([bytes], name, { type: MIME.xlsx });
+    const nav = navigator as Navigator & { canShare?: (d: { files?: File[] }) => boolean; share?: (d: { files?: File[]; title?: string }) => Promise<void> };
+    if (nav.canShare?.({ files: [file] }) && nav.share) {
+      await nav.share({ files: [file], title: name });
+      return;
+    }
+  }
   XLSX.writeFile(wb, name);
+}
+
+export function shareWorkbook(range: DateRange, fileLabel: string) {
+  return exportWorkbook(range, fileLabel, "share");
 }
 

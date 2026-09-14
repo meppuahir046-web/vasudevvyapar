@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { formatDate, qty } from "./format";
-import type { BusinessSettings, PaymentRow, SaleRow } from "./data";
+import type { BusinessSettings, PaymentRow, SaleReturnRow, SaleRow } from "./data";
 import { MIME, androidBridge, blobToBase64 } from "./native-bridge";
 
 
@@ -761,6 +761,169 @@ export function invoiceWhatsappMessage(data: InvoiceData, money?: (v: number) =>
 export async function invoiceBlobUrl(data: InvoiceData): Promise<string> {
   const doc = await buildInvoicePdf(data);
   return URL.createObjectURL(doc.output("blob") as Blob);
+}
+
+export type ReturnPdfLabels = {
+  title: string;
+  billTo: string;
+  returnBillNo: string;
+  originalInvoice: string;
+  originalDate: string;
+  returnDate: string;
+  status: string;
+  returned: string;
+  no: string;
+  product: string;
+  sku: string;
+  unit: string;
+  originalQty: string;
+  returnedQty: string;
+  remainingQty: string;
+  rate: string;
+  amount: string;
+  originalTotal: string;
+  returnAmount: string;
+  remainingValue: string;
+  paid: string;
+  pending: string;
+  paymentAdjustment: string;
+  noRefund: string;
+};
+
+export async function buildSaleReturnPdf(
+  data: SaleReturnRow,
+  settings: BusinessSettings | null,
+  labels: ReturnPdfLabels,
+): Promise<jsPDF> {
+  const doc = new jsPDF({ unit: "pt", format: "a4", compress: true });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const M = 36;
+  let font = "helvetica";
+  if (GUJARATI.test(JSON.stringify({ data, labels }))) {
+    const b64 = await loadGujaratiFont();
+    if (b64) {
+      doc.addFileToVFS("NotoSansGujarati.ttf", b64);
+      doc.addFont("NotoSansGujarati.ttf", "gujarati", "normal");
+      font = "gujarati";
+    }
+  }
+  const logo = await loadLogo(settings?.logo_url);
+  const setFont = (style: "normal" | "bold" = "normal") => doc.setFont(font, font === "gujarati" ? "normal" : style);
+  let y = 44;
+  setFont("bold");
+  doc.setFontSize(18);
+  doc.text(settings?.business_name || "Invoice", M, y);
+  if (logo) doc.addImage(logo, "PNG", W - M - 64, y - 18, 64, 32);
+  setFont();
+  doc.setFontSize(8.5);
+  [settings?.address, settings?.city, settings?.phone, settings?.email, settings?.gst_number]
+    .filter(Boolean)
+    .forEach((line) => {
+      y += 11;
+      doc.text(String(line), M, y);
+    });
+  setFont("bold");
+  doc.setFontSize(16);
+  doc.text(labels.title, W - M, 44, { align: "right" });
+  setFont();
+  doc.setFontSize(8.5);
+  [
+    `${labels.returnBillNo}: ${data.id.slice(0, 8).toUpperCase()}`,
+    `${labels.originalInvoice}: ${data.sales?.invoice_no ?? "-"}`,
+    `${labels.originalDate}: ${formatDate(data.sales?.sale_date)}`,
+    `${labels.returnDate}: ${formatDate(data.return_date)}`,
+    `${labels.status}: ${labels.returned}`,
+  ].forEach((line) => {
+    y = Math.max(y + 11, 60);
+    doc.text(line, W - M, y, { align: "right" });
+  });
+  y = Math.max(y + 20, 132);
+  doc.setDrawColor(LINE);
+  doc.line(M, y, W - M, y);
+  y += 17;
+  setFont("bold");
+  doc.setFontSize(10);
+  doc.text(labels.billTo, M, y);
+  setFont();
+  doc.setFontSize(8.5);
+  [data.customers?.name, data.customers?.mobile, data.customers?.address, data.customers?.city]
+    .filter(Boolean)
+    .forEach((line) => {
+      y += 11;
+      doc.text(String(line), M, y);
+    });
+  y += 20;
+
+  const columns = [
+    [labels.no, 22, "left"], [labels.product, 100, "left"], [labels.sku, 48, "left"],
+    [labels.unit, 36, "left"], [labels.originalQty, 52, "right"], [labels.returnedQty, 56, "right"],
+    [labels.remainingQty, 58, "right"], [labels.rate, 62, "right"], [labels.amount, 70, "right"],
+  ] as const;
+  const positions = columns.map((_, index) => M + columns.slice(0, index).reduce((sum, column) => sum + column[1], 0));
+  const header = () => {
+    doc.setFillColor(SOFT.r, SOFT.g, SOFT.b);
+    doc.rect(M, y - 11, W - M * 2, 18, "F");
+    setFont("bold");
+    doc.setFontSize(7.2);
+    columns.forEach(([label, width, align], index) => {
+      doc.text(label, align === "right" ? positions[index]! + width - 3 : positions[index]! + 3, y, {
+        align,
+        maxWidth: width - 6,
+      });
+    });
+    setFont();
+    y += 20;
+  };
+  header();
+  (data.sale_return_items ?? []).forEach((item, index) => {
+    if (y > H - 150) {
+      doc.addPage();
+      y = 48;
+      header();
+    }
+    const originalQty = Number(item.sale_items?.quantity ?? item.quantity);
+    const returnedQty = Number(item.quantity);
+    const remainingQty = Math.max(0, originalQty - Number(item.sale_items?.returned_quantity ?? returnedQty));
+    const values = [String(index + 1), item.products?.name ?? "-", item.products?.sku ?? "-", item.sale_items?.unit ?? "-", qty(originalQty), qty(returnedQty), qty(remainingQty), money(item.rate), money(item.amount)];
+    doc.setFontSize(7.4);
+    values.forEach((value, valueIndex) => {
+      const [, width, align] = columns[valueIndex]!;
+      doc.text(value, align === "right" ? positions[valueIndex]! + width - 3 : positions[valueIndex]! + 3, y, { align, maxWidth: width - 6 });
+    });
+    y += 17;
+  });
+  doc.line(M, y, W - M, y);
+  y += 18;
+  const totalRow = (label: string, value: string, bold = false) => {
+    setFont(bold ? "bold" : "normal");
+    doc.setFontSize(bold ? 10 : 8.5);
+    doc.text(label, W - M - 135, y, { align: "right" });
+    doc.text(value, W - M, y, { align: "right" });
+    y += 15;
+  };
+  const originalTotal = Number(data.sales?.total ?? 0);
+  totalRow(labels.originalTotal, money(originalTotal));
+  totalRow(labels.returnAmount, money(data.total_amount), true);
+  totalRow(labels.remainingValue, money(originalTotal - Number(data.total_amount)));
+  totalRow(labels.paid, money(data.sales?.paid_amount ?? 0));
+  totalRow(labels.pending, money(data.sales?.pending_amount ?? 0));
+  setFont();
+  doc.setFontSize(8.5);
+  doc.text(`${labels.paymentAdjustment}: ${labels.noRefund}`, M, y + 8, { maxWidth: W - M * 2 });
+  return doc;
+}
+
+export async function downloadSaleReturnPdf(data: SaleReturnRow, settings: BusinessSettings | null, labels: ReturnPdfLabels) {
+  const doc = await buildSaleReturnPdf(data, settings, labels);
+  const name = `Return-${data.sales?.invoice_no ?? data.id.slice(0, 8)}.pdf`;
+  const bridge = androidBridge();
+  if (bridge?.saveFile) {
+    const b64 = await blobToBase64(doc.output("blob") as Blob);
+    bridge.saveFile(b64, name, MIME.pdf);
+    return;
+  }
+  doc.save(name);
 }
 
 export async function downloadInvoicePdf(data: InvoiceData) {

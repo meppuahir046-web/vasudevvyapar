@@ -26,6 +26,7 @@ import {
   addPayment,
   cancelSale,
   createSaleReturn,
+  fetchSaleReturn,
   fetchPayments,
   fetchSale,
   fetchSettings,
@@ -40,6 +41,7 @@ import {
   printInvoicePdf,
   saleToInvoice,
   shareInvoice,
+  downloadSaleReturnPdf,
 } from "@/lib/pdf";
 
 import { invoiceLabels } from "@/lib/invoice-labels";
@@ -117,12 +119,43 @@ function SaleDetailPage() {
           .map(([sale_item_id, v]) => ({ sale_item_id, quantity: num(v) })),
         returnNotes.trim() || undefined,
       ),
-    onSuccess: () => {
-      toast.success(t("returns.saved"));
-      setReturnOpen(false);
-      setReturnQty({});
-      setReturnNotes("");
-      invalidate();
+    onSuccess: async (returnId) => {
+      try {
+        const returnData = await fetchSaleReturn(returnId);
+        await downloadSaleReturnPdf(returnData, settings.data ?? null, {
+          title: t("returns.bill"),
+          billTo: t("invoices.billTo"),
+          returnBillNo: t("returns.billNumber"),
+          originalInvoice: t("returns.originalInvoice"),
+          originalDate: t("returns.originalDate"),
+          returnDate: t("returns.returnDate"),
+          status: t("returns.status"),
+          returned: t("returns.returned"),
+          no: "No.",
+          product: t("common.product"),
+          sku: "SKU",
+          unit: t("common.unit"),
+          originalQty: t("returns.originalQty"),
+          returnedQty: t("returns.returnedQty"),
+          remainingQty: t("returns.remainingQty"),
+          rate: t("common.rate"),
+          amount: t("common.amount"),
+          originalTotal: t("returns.originalTotal"),
+          returnAmount: t("returns.returnAmount"),
+          remainingValue: t("returns.remainingValue"),
+          paid: t("common.paid"),
+          pending: t("common.pending"),
+          paymentAdjustment: t("returns.paymentAdjustment"),
+          noRefund: t("returns.noRefund"),
+        });
+        toast.success(t("returns.saved"));
+        setReturnOpen(false);
+        setReturnQty({});
+        setReturnNotes("");
+        invalidate();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : t("common.error"));
+      }
     },
     onError: (e: Error) => toast.error(friendlyError(e.message, t)),
   });
