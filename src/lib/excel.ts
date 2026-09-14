@@ -12,6 +12,7 @@ import {
   fetchSaleItems,
   fetchSales,
   fetchSettings,
+  isValidReceivedPayment,
 } from "./data";
 import { monthKey, monthLabel, moneyPlain, num, type DateRange } from "./format";
 
@@ -25,14 +26,15 @@ function addSheets(wb: XLSX.WorkBook, sheets: Sheet[]) {
 }
 
 export async function exportWorkbook(range: DateRange, fileLabel: string, delivery: "download" | "share" = "download") {
-  const [settings, products, inventory, purchases, sales, saleItems, payments, customers, returns, ledger] =
+  const [settings, products, inventory, purchases, sales, cancelledSales, saleItems, payments, customers, returns, ledger] =
     await Promise.all([
       fetchSettings(),
       fetchProducts(),
       fetchInventory(),
       fetchPurchases(range),
       fetchSales({ range }),
-      fetchSaleItems({ range }),
+      fetchSales({ range, status: "CANCELLED" }),
+      fetchSaleItems({ range, includeCancelled: true }),
       fetchPayments({ range }),
       fetchCustomerSummaries(),
       fetchReturns(range),
@@ -40,6 +42,9 @@ export async function exportWorkbook(range: DateRange, fileLabel: string, delive
     ]);
 
   const activeSales = sales.filter((s) => s.status === "ACTIVE");
+  const returnedAmount = returns.reduce((sum, item) => sum + num(item.total_amount), 0);
+  const grossSales = activeSales.reduce((sum, sale) => sum + num(sale.total), 0) + returnedAmount;
+  const netSales = activeSales.reduce((sum, sale) => sum + num(sale.total), 0);
 
   // Monthly summary
   const byMonth = new Map<string, { sales: number; profit: number; paid: number; pending: number; orders: number }>();
@@ -72,10 +77,13 @@ export async function exportWorkbook(range: DateRange, fileLabel: string, delive
         { Metric: "Products", Value: products.length },
         { Metric: "Customers", Value: customers.length },
         { Metric: "Orders", Value: activeSales.length },
-        { Metric: "Sales Total", Value: moneyPlain(activeSales.reduce((a, s) => a + num(s.total), 0)) },
-        { Metric: "Received", Value: moneyPlain(activeSales.reduce((a, s) => a + num(s.paid_amount), 0)) },
+        { Metric: "Gross Sales", Value: moneyPlain(grossSales) },
+        { Metric: "Returns", Value: moneyPlain(returnedAmount) },
+        { Metric: "Cancelled Sales", Value: moneyPlain(cancelledSales.reduce((sum, sale) => sum + num(sale.total), 0)) },
+        { Metric: "Net Sales", Value: moneyPlain(netSales) },
+        { Metric: "Received", Value: moneyPlain(payments.filter(isValidReceivedPayment).reduce((a, p) => a + num(p.amount), 0)) },
         { Metric: "Pending", Value: moneyPlain(activeSales.reduce((a, s) => a + num(s.pending_amount), 0)) },
-        { Metric: "Gross Profit", Value: moneyPlain(activeSales.reduce((a, s) => a + num(s.profit), 0)) },
+        { Metric: "Net Profit", Value: moneyPlain(activeSales.reduce((a, s) => a + num(s.profit), 0)) },
         { Metric: "Stock Purchases", Value: moneyPlain(purchases.reduce((a, p) => a + num(p.total_amount), 0)) },
         { Metric: "Stock Value", Value: moneyPlain(inventory.reduce((a, p) => a + num(p.stock_value), 0)) },
       ],

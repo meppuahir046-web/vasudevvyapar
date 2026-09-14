@@ -33,8 +33,8 @@ function statusOf(s: { status: string; total: number; paid_amount: number }) {
 
 function SalesPage() {
   const { t } = useI18n();
-  const [preset, setPreset] = useState<RangePreset>("thisMonth");
-  const [range, setRange] = useState<DateRange>(presetRange("thisMonth"));
+  const [preset, setPreset] = useState<RangePreset>("all");
+  const [range, setRange] = useState<DateRange>(presetRange("all"));
   const [search, setSearch] = useState("");
 
   const sales = useQuery({

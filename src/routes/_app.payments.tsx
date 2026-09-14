@@ -27,6 +27,7 @@ import {
   fetchPayments,
   fetchSales,
   friendlyError,
+  isValidReceivedPayment,
   type PaymentMethod,
 } from "@/lib/data";
 import { formatDate, money, num, presetRange, toISODate, type DateRange, type RangePreset } from "@/lib/format";
@@ -46,8 +47,8 @@ export const Route = createFileRoute("/_app/payments")({
 function PaymentsPage() {
   const { t } = useI18n();
   const qc = useQueryClient();
-  const [preset, setPreset] = useState<RangePreset>("thisMonth");
-  const [range, setRange] = useState<DateRange>(presetRange("thisMonth"));
+  const [preset, setPreset] = useState<RangePreset>("all");
+  const [range, setRange] = useState<DateRange>(presetRange("all"));
   const [open, setOpen] = useState(false);
 
   const [customerId, setCustomerId] = useState("");
@@ -71,7 +72,7 @@ function PaymentsPage() {
 
   const totals = useMemo(() => {
     const rows = payments.data ?? [];
-    const received = rows.reduce((a, p) => a + num(p.amount), 0);
+    const received = rows.filter(isValidReceivedPayment).reduce((a, p) => a + num(p.amount), 0);
     const dues = (customers.data ?? []).reduce((a, c) => a + num(c.total_pending), 0);
     return { received, dues };
   }, [payments.data, customers.data]);
@@ -235,6 +236,7 @@ function PaymentsPage() {
                     <TableHead>{t("common.customer")}</TableHead>
                     <TableHead>{t("common.invoice")}</TableHead>
                     <TableHead>{t("payments.method")}</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
                     <TableHead>{t("payments.reference")}</TableHead>
                     <TableHead className="text-right">{t("payments.amount")}</TableHead>
                   </TableRow>
@@ -262,6 +264,9 @@ function PaymentsPage() {
                         )}
                       </TableCell>
                       <TableCell>{t(`payments.method.${p.method}`)}</TableCell>
+                      <TableCell>
+                        {isValidReceivedPayment(p) ? t("common.paid") : t("payments.reversed")}
+                      </TableCell>
                       <TableCell>{p.reference ?? "-"}</TableCell>
                       <TableCell className="text-right font-medium">{money(p.amount)}</TableCell>
                     </TableRow>

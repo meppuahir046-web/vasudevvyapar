@@ -31,8 +31,8 @@ export const Route = createFileRoute("/_app/purchases")({
 function PurchasesPage() {
   const { t } = useI18n();
   const qc = useQueryClient();
-  const [preset, setPreset] = useState<RangePreset>("thisMonth");
-  const [range, setRange] = useState<DateRange>(presetRange("thisMonth"));
+  const [preset, setPreset] = useState<RangePreset>("all");
+  const [range, setRange] = useState<DateRange>(presetRange("all"));
   const [open, setOpen] = useState(false);
   const [productId, setProductId] = useState("");
   const [supplierId, setSupplierId] = useState("");

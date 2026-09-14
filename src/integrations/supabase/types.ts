@@ -910,6 +910,10 @@ export type Database = {
         }
         Returns: string
       }
+      archive_or_delete_product: {
+        Args: { p_product_id: string }
+        Returns: Json
+      }
       ensure_business_settings: { Args: never; Returns: undefined }
       next_invoice_no: { Args: never; Returns: string }
       product_avg_cost: { Args: { p_product: string }; Returns: number }

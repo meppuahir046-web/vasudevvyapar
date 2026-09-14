@@ -15,6 +15,7 @@ import {
   fetchPurchases,
   fetchSaleItems,
   fetchSales,
+  isValidReceivedPayment,
 } from "@/lib/data";
 import { exportWorkbook } from "@/lib/excel";
 import {
@@ -46,8 +47,8 @@ export const Route = createFileRoute("/_app/reports")({
 
 function ReportsPage() {
   const { t } = useI18n();
-  const [preset, setPreset] = useState<RangePreset>("thisMonth");
-  const [range, setRange] = useState<DateRange>(presetRange("thisMonth"));
+  const [preset, setPreset] = useState<RangePreset>("all");
+  const [range, setRange] = useState<DateRange>(presetRange("all"));
   const [busy, setBusy] = useState(false);
 
   const sales = useQuery({ queryKey: ["sales", range], queryFn: () => fetchSales({ range }) });
@@ -65,7 +66,7 @@ function ReportsPage() {
   const totals = useMemo(() => {
     const sold = active.reduce((a, s) => a + num(s.total), 0);
     const profit = active.reduce((a, s) => a + num(s.profit), 0);
-    const received = (payments.data ?? []).reduce((a, p) => a + num(p.amount), 0);
+    const received = (payments.data ?? []).filter(isValidReceivedPayment).reduce((a, p) => a + num(p.amount), 0);
     const pending = active.reduce((a, s) => a + num(s.pending_amount), 0);
     const stockIn = (purchases.data ?? []).reduce((a, p) => a + num(p.total_amount), 0);
     const stockValue = (inventory.data ?? []).reduce((a, r) => a + num(r.stock_value), 0);
@@ -86,7 +87,7 @@ function ReportsPage() {
     (payments.data ?? []).forEach((p) => {
       const k = monthKey(p.paid_at);
       const row = map.get(k) ?? { sales: 0, profit: 0, count: 0, received: 0 };
-      row.received += num(p.amount);
+      if (isValidReceivedPayment(p)) row.received += num(p.amount);
       map.set(k, row);
     });
     return [...map.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1));

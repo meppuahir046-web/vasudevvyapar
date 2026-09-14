@@ -3,29 +3,13 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { formatDate, money } from "@/lib/format";
 import { downloadInvoicePdf, saleToInvoice, shareInvoice } from "@/lib/pdf";
+import { invoiceLabels } from "@/lib/invoice-labels";
 import type { BusinessSettings, SaleRow } from "@/lib/data";
 import { toast } from "sonner";
 
 export function useInvoiceLabels() {
   const { t } = useI18n();
-  return {
-    invoice: t("invoices.title"),
-    billTo: t("invoices.billTo"),
-    date: t("invoices.date"),
-    product: t("common.product"),
-    qty: t("common.quantity"),
-    rate: t("common.rate"),
-    amount: t("common.amount"),
-    subtotal: t("sales.subtotal"),
-    discount: t("sales.discount"),
-    total: t("common.total"),
-    paid: t("common.paid"),
-    pending: t("common.pending"),
-    gst: t("invoices.gst"),
-    thankYou: t("invoices.thankYou"),
-    cancelled: t("invoices.cancelled"),
-    cancellationDate: t("invoices.cancellationDate"),
-  };
+  return invoiceLabels(t);
 }
 
 export function InvoiceActions({

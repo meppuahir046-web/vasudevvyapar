@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loading, PageHeader } from "@/components/ui-bits";
 import { useI18n } from "@/lib/i18n";
-import { fetchSettings, resetDemoData, saveSettings, seedDemoData, type BusinessSettings } from "@/lib/data";
+import { fetchSettings, resetBusinessData, resetDemoData, saveSettings, seedDemoData, type BusinessSettings } from "@/lib/data";
 import { signOut } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -119,6 +119,15 @@ function SettingsPage() {
     onSuccess: (_d, mode) => {
       toast.success(mode === "seed" ? t("settings.demoCreated") : t("settings.demoDeleted"));
       qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const resetBusiness = useMutation({
+    mutationFn: resetBusinessData,
+    onSuccess: () => {
+      toast.success(t("settings.businessResetDone"));
+      void qc.invalidateQueries();
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -251,6 +260,25 @@ function SettingsPage() {
               </Button>
               <Button variant="destructive" size="sm" disabled={demo.isPending} onClick={() => demo.mutate("reset")}>
                 {t("settings.resetDemo")}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{t("settings.resetBusiness")}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-sm text-muted-foreground">{t("settings.resetBusinessWarning")}</p>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={resetBusiness.isPending}
+                onClick={() => {
+                  if (window.confirm(t("settings.resetBusinessConfirm"))) resetBusiness.mutate();
+                }}
+              >
+                {t("settings.resetBusiness")}
               </Button>
             </CardContent>
           </Card>

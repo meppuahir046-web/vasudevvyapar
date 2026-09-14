@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,7 @@ function NewSalePage() {
   const inventory = useQuery({ queryKey: ["inventory"], queryFn: fetchInventory });
 
   const [customerId, setCustomerId] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
   const [saleDate, setSaleDate] = useState(toISODate(new Date()));
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [discount, setDiscount] = useState("0");
@@ -71,6 +72,13 @@ function NewSalePage() {
     () => new Map((inventory.data ?? []).map((p) => [p.id, p])),
     [inventory.data],
   );
+  const filteredCustomers = useMemo(() => {
+    const search = customerSearch.trim().toLowerCase();
+    if (!search) return customers.data ?? [];
+    return (customers.data ?? []).filter((customer) =>
+      `${customer.name} ${customer.mobile ?? ""}`.toLowerCase().includes(search),
+    );
+  }, [customers.data, customerSearch]);
 
   const setLine = (key: number, patch: Partial<Line>) =>
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
@@ -131,17 +139,44 @@ function NewSalePage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Label>{t("sales.selectCustomer")}</Label>
-                <Select value={customerId} onValueChange={setCustomerId}>
+                <Select
+                  value={customerId}
+                  onValueChange={(value) => {
+                    setCustomerId(value);
+                    setCustomerSearch("");
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder={t("sales.selectCustomer")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {(customers.data ?? []).map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                        {c.mobile ? ` · ${c.mobile}` : ""}
-                      </SelectItem>
-                    ))}
+                    <div className="sticky top-0 z-10 bg-popover p-1">
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          type="search"
+                          value={customerSearch}
+                          onChange={(event) => setCustomerSearch(event.target.value)}
+                          onKeyDown={(event) => event.stopPropagation()}
+                          onPointerDown={(event) => event.stopPropagation()}
+                          placeholder={t("customers.searchNameOrMobile")}
+                          className="h-9 pl-8"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                    {filteredCustomers.length > 0 ? (
+                      filteredCustomers.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                          {c.mobile ? ` · ${c.mobile}` : ""}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                        {t("customers.noSearchResults")}
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

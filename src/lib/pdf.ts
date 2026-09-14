@@ -228,6 +228,11 @@ const SOFT = { r: 236, g: 243, b: 240 };
 const LINE = 205;
 const MUTED = 110;
 
+function formatReturnMoney(value: number | null | undefined): string {
+  const amount = Number.isFinite(Number(value)) ? Number(value) : 0;
+  return `Rs. ${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   const doc = new jsPDF({ unit: "pt", format: "a4", compress: true });
 
@@ -885,7 +890,7 @@ export async function buildSaleReturnPdf(
     const originalQty = Number(item.sale_items?.quantity ?? item.quantity);
     const returnedQty = Number(item.quantity);
     const remainingQty = Math.max(0, originalQty - Number(item.sale_items?.returned_quantity ?? returnedQty));
-    const values = [String(index + 1), item.products?.name ?? "-", item.products?.sku ?? "-", item.sale_items?.unit ?? "-", qty(originalQty), qty(returnedQty), qty(remainingQty), money(item.rate), money(item.amount)];
+    const values = [String(index + 1), item.products?.name ?? "-", item.products?.sku ?? "-", item.sale_items?.unit ?? "-", qty(originalQty), qty(returnedQty), qty(remainingQty), formatReturnMoney(item.rate), formatReturnMoney(item.amount)];
     doc.setFontSize(7.4);
     values.forEach((value, valueIndex) => {
       const [, width, align] = columns[valueIndex]!;
@@ -903,11 +908,11 @@ export async function buildSaleReturnPdf(
     y += 15;
   };
   const originalTotal = Number(data.sales?.total ?? 0);
-  totalRow(labels.originalTotal, money(originalTotal));
-  totalRow(labels.returnAmount, money(data.total_amount), true);
-  totalRow(labels.remainingValue, money(originalTotal - Number(data.total_amount)));
-  totalRow(labels.paid, money(data.sales?.paid_amount ?? 0));
-  totalRow(labels.pending, money(data.sales?.pending_amount ?? 0));
+  totalRow(labels.originalTotal, formatReturnMoney(originalTotal));
+  totalRow(labels.returnAmount, formatReturnMoney(data.total_amount), true);
+  totalRow(labels.remainingValue, formatReturnMoney(originalTotal - Number(data.total_amount)));
+  totalRow(labels.paid, formatReturnMoney(data.sales?.paid_amount ?? 0));
+  totalRow(labels.pending, formatReturnMoney(data.sales?.pending_amount ?? 0));
   setFont();
   doc.setFontSize(8.5);
   doc.text(`${labels.paymentAdjustment}: ${labels.noRefund}`, M, y + 8, { maxWidth: W - M * 2 });

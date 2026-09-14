@@ -1,12 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,7 +24,16 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState, Loading, PageHeader } from "@/components/ui-bits";
-import { UNITS, addCategory, fetchCategories, fetchInventory, saveProduct, type InventoryRow, type Unit } from "@/lib/data";
+import {
+  UNITS,
+  addCategory,
+  archiveOrDeleteProduct,
+  fetchCategories,
+  fetchInventory,
+  saveProduct,
+  type InventoryRow,
+  type Unit,
+} from "@/lib/data";
 import { formatDate, money, num, qty } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 
@@ -65,6 +84,8 @@ function ProductsPage() {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [newCategory, setNewCategory] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("active");
+  const [productToDelete, setProductToDelete] = useState<InventoryRow | null>(null);
 
   const inventory = useQuery({ queryKey: ["inventory"], queryFn: fetchInventory });
   const categories = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
@@ -104,9 +125,23 @@ function ProductsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const rows = (inventory.data ?? []).filter((p) =>
-    [p.name, p.sku, p.brand].filter(Boolean).join(" ").toLowerCase().includes(search.trim().toLowerCase()),
-  );
+  const deleteProduct = useMutation({
+    mutationFn: () => archiveOrDeleteProduct(productToDelete!.id),
+    onSuccess: (result) => {
+      toast.success(result.action === "deleted" ? t("products.deleted") : t("products.archived"));
+      setProductToDelete(null);
+      void qc.invalidateQueries({ queryKey: ["inventory"] });
+      void qc.invalidateQueries({ queryKey: ["products"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const rows = (inventory.data ?? []).filter((p) => {
+    if (statusFilter === "active" && !p.active) return false;
+    if (statusFilter === "inactive" && p.active) return false;
+    return [p.name, p.sku, p.brand].filter(Boolean).join(" ").toLowerCase().includes(search.trim().toLowerCase());
+  });
 
   const edit = (p: InventoryRow) => {
     setDraft({
@@ -147,6 +182,17 @@ function ProductsPage() {
         placeholder={t("products.search")}
         className="max-w-sm"
       />
+
+      <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="active">{t("products.activeFilter")}</SelectItem>
+          <SelectItem value="inactive">{t("products.archivedFilter")}</SelectItem>
+          <SelectItem value="all">{t("products.allFilter")}</SelectItem>
+        </SelectContent>
+      </Select>
 
       <Card>
         <CardContent className="overflow-x-auto px-0">
@@ -194,9 +240,26 @@ function ProductsPage() {
                       {p.last_purchase ? formatDate(p.last_purchase) : ""}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => edit(p)}>
-                        {t("common.edit")}
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => edit(p)}>
+                          {t("common.edit")}
+                        </Button>
+                        {p.active ? (
+                          <Button variant="ghost" size="sm" onClick={() => setProductToDelete(p)}>
+                            <Trash2 className="mr-1 size-4" /> {t("common.delete")}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => saveProduct({ id: p.id, name: p.name, active: true })
+                              .then(() => qc.invalidateQueries({ queryKey: ["inventory"] }))
+                              .catch((e: Error) => toast.error(e.message))}
+                          >
+                            <RotateCcw className="mr-1 size-4" /> {t("products.restore")}
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -307,6 +370,40 @@ function ProductsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!productToDelete} onOpenChange={(open) => !open && setProductToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("products.deleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>{t("products.deleteQuestion")}</p>
+                <p>
+                  <strong>{productToDelete?.name}</strong>
+                  {productToDelete?.sku ? ` · ${productToDelete.sku}` : ""}
+                </p>
+                <p>
+                  {t("products.currentStock")}: {qty(productToDelete?.current_stock)} {productToDelete ? t(`unit.${productToDelete.unit}`) : ""}
+                </p>
+                {num(productToDelete?.current_stock) > 0 && (
+                  <p className="font-medium text-destructive">
+                    {t("products.stockDeleteWarning", {
+                      stock: qty(productToDelete?.current_stock),
+                      unit: productToDelete ? t(`unit.${productToDelete.unit}`) : "",
+                    })}
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteProduct.mutate()} disabled={deleteProduct.isPending}>
+              {t("common.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -176,8 +176,16 @@ export type PaymentRow = {
   is_reversal: boolean;
   paid_at: string;
   customers?: { name: string } | null;
-  sales?: { invoice_no: string } | null;
+  sales?: { invoice_no: string; status?: "ACTIVE" | "CANCELLED" } | null;
 };
+
+export function isValidReceivedPayment(payment: PaymentRow): boolean {
+  return (
+    !payment.is_reversal &&
+    Number(payment.amount) > 0 &&
+    (payment.sale_id === null || payment.sales?.status === "ACTIVE")
+  );
+}
 
 export type PurchaseRow = {
   id: string;
@@ -268,6 +276,20 @@ export async function saveProduct(p: Partial<ProductRow> & { name: string }) {
     return unwrap(await db.from("products").update(p).eq("id", p.id).select().single());
   }
   return unwrap(await db.from("products").insert(p).select().single());
+}
+
+export type ProductDeleteResult = {
+  success: boolean;
+  action: "deleted" | "archived";
+  product_id: string;
+  removed_stock: number;
+  message: string;
+};
+
+export async function archiveOrDeleteProduct(productId: string): Promise<ProductDeleteResult> {
+  const res = await db.rpc("archive_or_delete_product", { p_product_id: productId });
+  if (res.error) throw new Error(res.error.message);
+  return res.data as ProductDeleteResult;
 }
 
 export async function fetchCategories() {
@@ -419,14 +441,16 @@ export async function fetchSale(id: string): Promise<SaleRow> {
   );
 }
 
-export async function fetchSaleItems(opts: { range?: DateRange; productId?: string; customerId?: string } = {}) {
+export async function fetchSaleItems(
+  opts: { range?: DateRange; productId?: string; customerId?: string; includeCancelled?: boolean } = {},
+) {
   let q = db
     .from("sale_items")
     .select("*, products(name, sku), sales!inner(invoice_no, sale_date, customer_id, status, customers(name, mobile))")
     .order("created_at", { ascending: false });
   if (opts.productId) q = q.eq("product_id", opts.productId);
   if (opts.customerId) q = q.eq("sales.customer_id", opts.customerId);
-  q = q.eq("sales.status", "ACTIVE");
+  if (!opts.includeCancelled) q = q.eq("sales.status", "ACTIVE");
   if (opts.range) q = q.gte("sales.sale_date", opts.range.from).lte("sales.sale_date", opts.range.to);
   return unwrap<
     (SaleItemRow & {
@@ -492,7 +516,7 @@ export async function createSaleReturn(
 export async function fetchPayments(opts: { range?: DateRange; customerId?: string; saleId?: string } = {}) {
   let q = db
     .from("payments")
-    .select("*, customers(name), sales(invoice_no)")
+    .select("*, customers(name), sales(invoice_no, status)")
     .order("paid_at", { ascending: false })
     .order("created_at", { ascending: false });
   if (opts.range) q = q.gte("paid_at", opts.range.from).lte("paid_at", opts.range.to);
@@ -558,6 +582,18 @@ export async function seedDemoData() {
 export async function resetDemoData() {
   const res = await db.rpc("reset_demo_data");
   if (res.error) throw new Error(res.error.message);
+}
+
+export type BusinessResetResult = {
+  success: boolean;
+  owner_id: string;
+  deleted: Record<string, number>;
+};
+
+export async function resetBusinessData(): Promise<BusinessResetResult> {
+  const res = await db.rpc("reset_business_data");
+  if (res.error) throw new Error(res.error.message);
+  return res.data as BusinessResetResult;
 }
 
 /* ---------------- global search ---------------- */

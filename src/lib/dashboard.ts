@@ -1,6 +1,8 @@
 import {
   fetchCustomerSummaries,
   fetchInventory,
+  isValidReceivedPayment,
+  fetchPayments,
   fetchProducts,
   fetchPurchases,
   fetchReturns,
@@ -9,12 +11,13 @@ import {
 import { num, presetRange } from "@/lib/format";
 
 export async function fetchDashboardData() {
-  const [products, inventory, customers, sales, purchases] = await Promise.all([
+  const [products, inventory, customers, sales, purchases, payments] = await Promise.all([
     fetchProducts(false),
     fetchInventory(),
     fetchCustomerSummaries(),
     fetchSales({ status: "ACTIVE" }),
     fetchPurchases(),
+    fetchPayments(),
   ]);
 
   const today = presetRange("today");
@@ -45,7 +48,7 @@ export async function fetchDashboardData() {
       stockInvestment: inventory.reduce((a, p) => a + num(p.total_investment), 0),
       stockValue: inventory.reduce((a, p) => a + num(p.stock_value), 0),
       totalSales: sales.reduce((a, s) => a + num(s.total), 0),
-      totalReceived: sales.reduce((a, s) => a + num(s.paid_amount), 0),
+      totalReceived: payments.filter(isValidReceivedPayment).reduce((a, p) => a + num(p.amount), 0),
       totalPending: sales.reduce((a, s) => a + num(s.pending_amount), 0),
       totalProfit: sales.reduce((a, s) => a + num(s.profit), 0),
       purchaseInvestment: purchases.reduce((a, p) => a + num(p.total_amount), 0),
