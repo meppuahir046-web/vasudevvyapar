@@ -108,7 +108,7 @@ function CustomerDetail() {
   const s = summary.data;
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-full">
       <PageHeader
         title={c.name}
         subtitle={[c.mobile, c.city].filter(Boolean).join(" · ") || t("customers.profile")}
@@ -148,13 +148,15 @@ function CustomerDetail() {
         />
       </div>
 
-      <Tabs defaultValue="sales" className="mt-6">
-        <TabsList>
+      <Tabs defaultValue="sales" className="mt-6 min-w-0">
+        <div className="w-full max-w-full overflow-x-auto">
+          <TabsList className="inline-flex w-max max-w-none">
           <TabsTrigger value="sales">{t("customers.purchaseHistory")}</TabsTrigger>
           <TabsTrigger value="payments">{t("customers.paymentHistory")}</TabsTrigger>
           <TabsTrigger value="products">{t("customers.productsPurchased")}</TabsTrigger>
           <TabsTrigger value="prices">{t("customers.prices")}</TabsTrigger>
-        </TabsList>
+          </TabsList>
+        </div>
 
         <TabsContent value="sales">
           <Card>

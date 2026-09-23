@@ -19,7 +19,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { EmptyState, Loading, PageHeader, StatusBadge } from "@/components/ui-bits";
+import {
+  EmptyState,
+  Loading,
+  PageHeader,
+  pageActionButtonClass,
+  StatusBadge,
+  SummaryRow,
+  TableScroll,
+} from "@/components/ui-bits";
+import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import {
   PAYMENT_METHODS,
@@ -241,34 +250,46 @@ function SaleDetailPage() {
 
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-full">
       <PageHeader
         title={`${t("common.invoice")} ${s.invoice_no}`}
         subtitle={`${formatDate(s.sale_date)} · ${s.customers?.name ?? "-"}`}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={onPreview}>
-              <Eye className="mr-1 size-4" /> {t("invoices.preview")}
+            <Button variant="outline" size="sm" className={pageActionButtonClass} onClick={onPreview}>
+              <Eye className="mr-1 size-4 shrink-0" /> {t("invoices.preview")}
             </Button>
-            <Button variant="outline" size="sm" onClick={onDownload}>
-              <Download className="mr-1 size-4" /> {t("invoices.download")}
+            <Button variant="outline" size="sm" className={pageActionButtonClass} onClick={onDownload}>
+              <Download className="mr-1 size-4 shrink-0" /> {t("invoices.download")}
             </Button>
-            <Button variant="outline" size="sm" onClick={onPrint}>
-              <Printer className="mr-1 size-4" /> {t("invoices.print")}
+            <Button variant="outline" size="sm" className={pageActionButtonClass} onClick={onPrint}>
+              <Printer className="mr-1 size-4 shrink-0" /> {t("invoices.print")}
             </Button>
 
-            <Button variant="outline" size="sm" onClick={() => void onShare("sheet")}>
-              <Share2 className="mr-1 size-4" /> {t("invoices.share")}
+            <Button
+              variant="outline"
+              size="sm"
+              className={pageActionButtonClass}
+              onClick={() => void onShare("sheet")}
+            >
+              <Share2 className="mr-1 size-4 shrink-0" /> {t("invoices.share")}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => void onShare("whatsapp")}>
-              <Share2 className="mr-1 size-4" /> {t("invoices.shareWhatsapp")}
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(pageActionButtonClass, "col-span-2 sm:col-span-1")}
+              onClick={() => void onShare("whatsapp")}
+            >
+              <Share2 className="mr-1 size-4 shrink-0" /> {t("invoices.shareWhatsapp")}
             </Button>
 
             {s.status === "ACTIVE" && (
               <>
                 <Dialog open={payOpen} onOpenChange={setPayOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm">{t("sales.recordPayment")}</Button>
+                    <Button size="sm" className={cn(pageActionButtonClass, "col-span-2 sm:col-span-1")}>
+                      {t("sales.recordPayment")}
+                    </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
@@ -312,7 +333,7 @@ function SaleDetailPage() {
 
                 <Dialog open={returnOpen} onOpenChange={setReturnOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className={pageActionButtonClass}>
                       {t("sales.return")}
                     </Button>
                   </DialogTrigger>
@@ -362,6 +383,7 @@ function SaleDetailPage() {
                 <Button
                   variant="destructive"
                   size="sm"
+                  className={pageActionButtonClass}
                   onClick={() => {
                     if (window.confirm(t("sales.cancelConfirm"))) cancel.mutate();
                   }}
@@ -420,28 +442,62 @@ function SaleDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex-row items-center justify-between">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-3">
+        <Card className="min-w-0 lg:col-span-2">
+          <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-base">{t("sales.items")}</CardTitle>
             <StatusBadge status={status} />
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
+          <CardContent className="min-w-0">
+            <div className="space-y-3 md:hidden">
+              {(s.sale_items ?? []).map((i) => (
+                <div key={i.id} className="rounded-lg border bg-muted/20 p-3 text-sm">
+                  <p className="font-medium break-words [overflow-wrap:anywhere]">
+                    {i.products?.name ?? "-"}
+                    {num(i.returned_quantity) > 0 && (
+                      <span className="ml-1 text-xs font-normal text-muted-foreground">
+                        (-{qty(i.returned_quantity)} {t("returns.title")})
+                      </span>
+                    )}
+                  </p>
+                  <dl className="mt-2 space-y-1.5">
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground">{t("common.quantity")}</dt>
+                      <dd className="shrink-0 text-right tabular-nums">
+                        {qty(i.quantity)} {t(`unit.${i.unit}`)}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground">{t("common.rate")}</dt>
+                      <dd className="shrink-0 text-right tabular-nums">{money(i.rate)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground">{t("common.amount")}</dt>
+                      <dd className="shrink-0 text-right font-medium tabular-nums">{money(i.amount)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground">{t("common.profit")}</dt>
+                      <dd className="shrink-0 text-right tabular-nums">{money(i.profit)}</dd>
+                    </div>
+                  </dl>
+                </div>
+              ))}
+            </div>
+            <TableScroll className="hidden md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("common.product")}</TableHead>
-                    <TableHead className="text-right">{t("common.quantity")}</TableHead>
-                    <TableHead className="text-right">{t("common.rate")}</TableHead>
-                    <TableHead className="text-right">{t("common.amount")}</TableHead>
-                    <TableHead className="text-right">{t("common.profit")}</TableHead>
+                    <TableHead className="min-w-[8rem]">{t("common.product")}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t("common.quantity")}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t("common.rate")}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t("common.amount")}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t("common.profit")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(s.sale_items ?? []).map((i) => (
                     <TableRow key={i.id}>
-                      <TableCell>
+                      <TableCell className="max-w-[14rem] break-words [overflow-wrap:anywhere] sm:max-w-none">
                         {i.products?.name ?? "-"}
                         {num(i.returned_quantity) > 0 && (
                           <span className="ml-1 text-xs text-muted-foreground">
@@ -449,33 +505,35 @@ function SaleDetailPage() {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right whitespace-nowrap">
                         {qty(i.quantity)} {t(`unit.${i.unit}`)}
                       </TableCell>
-                      <TableCell className="text-right">{money(i.rate)}</TableCell>
-                      <TableCell className="text-right">{money(i.amount)}</TableCell>
-                      <TableCell className="text-right">{money(i.profit)}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{money(i.rate)}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{money(i.amount)}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{money(i.profit)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </div>
-            {s.notes && <p className="mt-3 text-sm text-muted-foreground">{s.notes}</p>}
+            </TableScroll>
+            {s.notes && (
+              <p className="mt-3 break-words text-sm text-muted-foreground [overflow-wrap:anywhere]">{s.notes}</p>
+            )}
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
-          <Card>
+        <div className="min-w-0 space-y-4">
+          <Card className="min-w-0">
             <CardHeader>
               <CardTitle className="text-base">{t("common.summary")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <Row label={t("sales.subtotal")} value={money(s.subtotal)} />
-              <Row label={t("sales.discount")} value={`- ${money(s.discount)}`} />
-              <Row label={t("sales.grandTotal")} value={money(s.total)} strong />
-              <Row label={t("common.paid")} value={money(s.paid_amount)} />
-              <Row label={t("common.pending")} value={money(s.pending_amount)} />
-              <Row label={t("common.profit")} value={money(s.profit)} />
+              <SummaryRow label={t("sales.subtotal")} value={money(s.subtotal)} />
+              <SummaryRow label={t("sales.discount")} value={`- ${money(s.discount)}`} />
+              <SummaryRow label={t("sales.grandTotal")} value={money(s.total)} strong />
+              <SummaryRow label={t("common.paid")} value={money(s.paid_amount)} />
+              <SummaryRow label={t("common.pending")} value={money(s.pending_amount)} />
+              <SummaryRow label={t("common.profit")} value={money(s.profit)} />
               <div className="pt-2">
                 <Link
                   to="/customers/$id"
@@ -498,11 +556,11 @@ function SaleDetailPage() {
               ) : (
                 <ul className="space-y-2 text-sm">
                   {(payments.data ?? []).map((p) => (
-                    <li key={p.id} className="flex items-center justify-between gap-2">
-                      <span className="text-muted-foreground">
+                    <li key={p.id} className="flex min-w-0 items-start justify-between gap-3">
+                      <span className="min-w-0 break-words text-muted-foreground [overflow-wrap:anywhere]">
                         {formatDate(p.paid_at)} · {t(`payments.method.${p.method}`)}
                       </span>
-                      <span className="font-medium">{money(p.amount)}</span>
+                      <span className="shrink-0 font-medium tabular-nums">{money(p.amount)}</span>
                     </li>
                   ))}
                 </ul>
@@ -511,15 +569,6 @@ function SaleDetailPage() {
           </Card>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={strong ? "font-bold" : "font-medium"}>{value}</span>
     </div>
   );
 }

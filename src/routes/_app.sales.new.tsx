@@ -23,6 +23,7 @@ import {
   type PaymentMethod,
 } from "@/lib/data";
 import { money, num, qty, toISODate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/sales/new")({
   head: () => ({
@@ -127,11 +128,11 @@ function NewSalePage() {
   });
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-full">
       <PageHeader title={t("sales.new")} />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-3">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">{t("sales.items")}</CardTitle>
           </CardHeader>
@@ -253,22 +254,22 @@ function NewSalePage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle className="text-base">{t("common.summary")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex justify-between text-sm">
+            <div className="flex min-w-0 justify-between gap-3 text-sm">
               <span className="text-muted-foreground">{t("sales.subtotal")}</span>
-              <span>{money(subtotal)}</span>
+              <span className="shrink-0 tabular-nums">{money(subtotal)}</span>
             </div>
             <div>
               <Label>{t("sales.discount")}</Label>
               <Input type="number" min="0" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} />
             </div>
-            <div className="flex justify-between text-base font-bold">
+            <div className="flex min-w-0 justify-between gap-3 text-base font-bold">
               <span>{t("sales.grandTotal")}</span>
-              <span>{money(total)}</span>
+              <span className="shrink-0 tabular-nums">{money(total)}</span>
             </div>
             <div>
               <Label>{t("sales.paidAmount")}</Label>
@@ -297,9 +298,11 @@ function NewSalePage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex justify-between text-sm font-medium">
+            <div className="flex min-w-0 justify-between gap-3 text-sm font-medium">
               <span className="text-muted-foreground">{t("sales.pendingAmount")}</span>
-              <span className={pending > 0 ? "text-destructive" : ""}>{money(pending)}</span>
+              <span className={cn("shrink-0 tabular-nums", pending > 0 ? "text-destructive" : "")}>
+                {money(pending)}
+              </span>
             </div>
             <div>
               <Label>{t("common.notes")}</Label>

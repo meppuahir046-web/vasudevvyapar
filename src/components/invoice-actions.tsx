@@ -6,6 +6,8 @@ import { downloadInvoicePdf, saleToInvoice, shareInvoice } from "@/lib/pdf";
 import { invoiceLabels } from "@/lib/invoice-labels";
 import type { BusinessSettings, SaleRow } from "@/lib/data";
 import { toast } from "sonner";
+import { pageActionButtonClass } from "@/components/ui-bits";
+import { cn } from "@/lib/utils";
 
 export function useInvoiceLabels() {
   const { t } = useI18n();
@@ -116,22 +118,29 @@ export function InvoiceActions({
 
   const size = compact ? "sm" : "default";
 
+  const btnClass = compact ? pageActionButtonClass : cn(pageActionButtonClass, "md:w-auto");
+
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button size={size} variant="outline" onClick={handleDownload}>
-        <Download className="mr-1 size-4" />
+    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+      <Button size={size} variant="outline" className={btnClass} onClick={handleDownload}>
+        <Download className="mr-1 size-4 shrink-0" />
         {t("invoices.download")}
       </Button>
-      <Button size={size} variant="outline" onClick={handlePrint}>
-        <Printer className="mr-1 size-4" />
+      <Button size={size} variant="outline" className={btnClass} onClick={handlePrint}>
+        <Printer className="mr-1 size-4 shrink-0" />
         {t("common.print")}
       </Button>
-      <Button size={size} variant="outline" onClick={handleShare}>
-        <Share2 className="mr-1 size-4" />
+      <Button size={size} variant="outline" className={btnClass} onClick={handleShare}>
+        <Share2 className="mr-1 size-4 shrink-0" />
         {t("common.share")}
       </Button>
-      <Button size={size} variant="outline" onClick={handleWhatsapp}>
-        <MessageCircle className="mr-1 size-4" />
+      <Button
+        size={size}
+        variant="outline"
+        className={cn(btnClass, "col-span-2 sm:col-span-1")}
+        onClick={handleWhatsapp}
+      >
+        <MessageCircle className="mr-1 size-4 shrink-0" />
         {t("invoices.shareWhatsapp")}
       </Button>
     </div>

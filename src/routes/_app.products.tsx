@@ -160,7 +160,7 @@ function ProductsPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="w-full min-w-0 max-w-full space-y-4">
       <PageHeader
         title={t("products.title")}
         actions={

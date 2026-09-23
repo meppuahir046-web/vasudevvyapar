@@ -147,7 +147,7 @@ function SettingsPage() {
   if (settings.isLoading) return <Loading />;
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-full">
       <PageHeader
         title={t("settings.title")}
         actions={
@@ -164,8 +164,8 @@ function SettingsPage() {
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle className="text-base">{t("settings.business")}</CardTitle>
           </CardHeader>

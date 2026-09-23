@@ -126,7 +126,7 @@ function ReportsPage() {
   const loading = sales.isLoading || items.isLoading || payments.isLoading;
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-full">
       <PageHeader
         title={t("reports.title")}
         subtitle={t("reports.monthlySummary")}

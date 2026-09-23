@@ -105,7 +105,7 @@ function PaymentsPage() {
   });
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-full">
       <PageHeader
         title={t("payments.title")}
         actions={

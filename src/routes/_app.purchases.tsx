@@ -96,7 +96,7 @@ function PurchasesPage() {
   const canSave = productId && num(quantity) > 0 && num(total) > 0;
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-full">
       <PageHeader
         title={t("purchases.title")}
         actions={

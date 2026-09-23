@@ -191,7 +191,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen w-full max-w-full bg-background">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r bg-sidebar p-2 lg:flex">
         {brand}
         <NavLinks />
@@ -204,7 +204,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="lg:pl-60">
-        <header className="sticky top-0 z-30 flex items-center gap-2 border-b bg-background/95 px-3 py-2 backdrop-blur">
+        <header className="sticky top-0 z-30 flex min-w-0 items-center gap-2 border-b bg-background/95 px-3 py-2 backdrop-blur">
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t("nav.more")}>
@@ -227,9 +227,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             </SheetContent>
           </Sheet>
 
-          <GlobalSearch />
+          <div className="min-w-0 flex-1">
+            <GlobalSearch />
+          </div>
 
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             <Button
               variant="outline"
               size="sm"
@@ -244,29 +246,30 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="mx-auto w-full min-w-0 max-w-7xl overflow-x-hidden px-3 pb-24 pt-4 lg:px-6 lg:pb-10">
+        <main className="mx-auto box-border w-full min-w-0 max-w-7xl px-3 pb-24 pt-4 lg:px-6 lg:pb-10">
           {children}
         </main>
       </div>
 
-      <nav className="fixed bottom-0 z-40 flex w-full items-stretch border-t bg-background lg:hidden">
+      <nav className="fixed bottom-0 z-40 flex w-full max-w-full items-stretch border-t bg-background pb-[env(safe-area-inset-bottom)] lg:hidden">
         {BOTTOM.map((item) => (
           <Link
             key={item.to}
             to={item.to}
-            className="flex flex-1 flex-col items-center gap-1 py-2 text-[11px] text-muted-foreground [&.active]:text-primary"
+            className="flex min-w-0 flex-1 flex-col items-center gap-0.5 px-0.5 py-1.5 text-[10px] leading-tight text-muted-foreground sm:text-[11px] [&.active]:text-primary"
             activeProps={{ className: "active" }}
           >
-            <item.icon className="size-5" />
-            {t(item.labelKey)}
+            <item.icon className="size-5 shrink-0" />
+            <span className="max-w-full truncate text-center">{t(item.labelKey)}</span>
           </Link>
         ))}
         <button
+          type="button"
           onClick={() => setMenuOpen(true)}
-          className="flex flex-1 flex-col items-center gap-1 py-2 text-[11px] text-muted-foreground"
+          className="flex min-w-0 flex-1 flex-col items-center gap-0.5 px-0.5 py-1.5 text-[10px] leading-tight text-muted-foreground sm:text-[11px]"
         >
-          <MoreHorizontal className="size-5" />
-          {t("nav.more")}
+          <MoreHorizontal className="size-5 shrink-0" />
+          <span className="max-w-full truncate text-center">{t("nav.more")}</span>
         </button>
       </nav>
     </div>

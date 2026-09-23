@@ -6,7 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { EmptyState, Loading, PageHeader, RangeFilter, StatCard, StatusBadge } from "@/components/ui-bits";
+import {
+  EmptyState,
+  Loading,
+  PageHeader,
+  RangeFilter,
+  StatCard,
+  StatusBadge,
+  TableScroll,
+} from "@/components/ui-bits";
 import { useI18n } from "@/lib/i18n";
 import { fetchSales } from "@/lib/data";
 import { formatDate, money, num, presetRange, type DateRange, type RangePreset } from "@/lib/format";
@@ -60,7 +68,7 @@ function SalesPage() {
   );
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-full">
       <PageHeader
         title={t("sales.title")}
         actions={
@@ -77,7 +85,7 @@ function SalesPage() {
         <StatCard label={t("common.profit")} value={money(totals.profit)} tone="success" />
       </div>
 
-      <Card className="mt-4">
+      <Card className="mt-4 min-w-0">
         <CardContent className="space-y-4 p-4">
           <div className="flex flex-wrap items-end gap-2">
             <RangeFilter
@@ -101,7 +109,7 @@ function SalesPage() {
           ) : rows.length === 0 ? (
             <EmptyState />
           ) : (
-            <div className="overflow-x-auto">
+            <TableScroll>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -134,7 +142,7 @@ function SalesPage() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+            </TableScroll>
           )}
         </CardContent>
       </Card>

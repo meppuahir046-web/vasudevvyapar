@@ -70,7 +70,7 @@ function CustomersPage() {
   });
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-full">
       <PageHeader
         title={t("customers.title")}
         actions={

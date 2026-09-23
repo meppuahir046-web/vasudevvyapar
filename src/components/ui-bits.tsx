@@ -9,6 +9,40 @@ import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { presetRange, type DateRange, type RangePreset } from "@/lib/format";
 
+/** Responsive header action buttons: 2-col grid on mobile, inline row on larger screens. */
+export const pageActionButtonClass =
+  "h-auto min-h-9 w-full justify-center whitespace-normal px-2 py-2 text-xs leading-snug sm:w-auto sm:px-3 sm:text-sm md:whitespace-nowrap";
+
+export function TableScroll({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn("w-full max-w-full min-w-0 overflow-x-auto", className)}>{children}</div>
+  );
+}
+
+export function SummaryRow({
+  label,
+  value,
+  strong,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  return (
+    <div className="flex min-w-0 items-start justify-between gap-3">
+      <span className="min-w-0 shrink text-muted-foreground [overflow-wrap:anywhere]">{label}</span>
+      <span
+        className={cn(
+          "shrink-0 text-right tabular-nums [overflow-wrap:anywhere]",
+          strong ? "font-bold" : "font-medium",
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
 export function PageHeader({
   title,
   subtitle,
@@ -19,12 +53,16 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight lg:text-2xl">{title}</h1>
-        {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+    <div className="mb-4 flex w-full min-w-0 max-w-full flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div className="min-w-0">
+        <h1 className="text-xl font-bold tracking-tight break-words lg:text-2xl">{title}</h1>
+        {subtitle && <p className="text-sm text-muted-foreground break-words">{subtitle}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && (
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center lg:justify-end">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

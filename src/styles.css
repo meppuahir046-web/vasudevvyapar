@@ -133,13 +133,32 @@
 }
 
 @layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
   * {
     border-color: var(--color-border);
   }
 
+  html {
+    max-width: 100%;
+  }
+
   body {
+    max-width: 100%;
     background-color: var(--color-background);
     color: var(--color-foreground);
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+    height: auto;
   }
 }
 

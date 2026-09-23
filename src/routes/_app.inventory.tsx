@@ -50,7 +50,7 @@ function InventoryPage() {
   }, [inventory]);
 
   return (
-    <div>
+    <div className="w-full min-w-0 max-w-full">
       <PageHeader title={t("inventory.title")} subtitle={t("app.tagline")} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

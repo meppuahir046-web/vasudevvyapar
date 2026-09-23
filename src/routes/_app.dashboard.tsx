@@ -95,7 +95,7 @@ function DashboardPage() {
   const pendingCustomers = (customers.data ?? []).filter((c) => num(c.total_pending) > 0.009);
 
   return (
-    <div className="space-y-5">
+    <div className="w-full min-w-0 max-w-full space-y-5">
       <PageHeader title={t("dashboard.title")} subtitle={t("app.tagline")} />
 
       {lowStock.length > 0 && (
