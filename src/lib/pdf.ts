@@ -935,6 +935,11 @@ export async function downloadInvoicePdf(data: InvoiceData) {
   const doc = await buildInvoicePdf(data);
   const name = invoiceFileName(data);
   const bridge = androidBridge();
+  if (bridge?.openPdf) {
+    const b64 = await blobToBase64(doc.output("blob") as Blob);
+    bridge.openPdf(b64, name);
+    return;
+  }
   if (bridge?.saveFile) {
     const b64 = await blobToBase64(doc.output("blob") as Blob);
     bridge.saveFile(b64, name, MIME.pdf);
