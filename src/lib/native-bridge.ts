@@ -17,6 +17,8 @@ export type AndroidBridge = {
     target: string,
     phone: string,
   ) => void;
+  /** Save a base64 PDF to cache and open it in Chrome / an external PDF viewer. */
+  openPdf?: (base64: string, filename: string) => void;
   /** Print a base64 PDF using Android PrintManager. */
   printFile?: (base64: string, filename: string) => void;
   /** Open a WhatsApp chat (text only). */
