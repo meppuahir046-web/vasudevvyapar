@@ -202,7 +202,6 @@ function SaleDetailPage() {
   const onDownload = async () => {
     try {
       await downloadInvoicePdf(invoice());
-      toast.success(t("invoices.pdfReady"));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
     }
