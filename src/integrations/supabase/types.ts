@@ -246,6 +246,7 @@ export type Database = {
           quantity: number
           reference_id: string | null
           reference_type: string | null
+          source_item_id: string | null
           txn_date: string
           txn_type: Database["public"]["Enums"]["inv_txn_type"]
           unit_cost: number | null
@@ -260,6 +261,7 @@ export type Database = {
           quantity: number
           reference_id?: string | null
           reference_type?: string | null
+          source_item_id?: string | null
           txn_date?: string
           txn_type: Database["public"]["Enums"]["inv_txn_type"]
           unit_cost?: number | null
@@ -274,6 +276,7 @@ export type Database = {
           quantity?: number
           reference_id?: string | null
           reference_type?: string | null
+          source_item_id?: string | null
           txn_date?: string
           txn_type?: Database["public"]["Enums"]["inv_txn_type"]
           unit_cost?: number | null
@@ -308,6 +311,7 @@ export type Database = {
           owner_id: string
           paid_at: string
           reference: string | null
+          reversal_of: string | null
           sale_id: string | null
         }
         Insert: {
@@ -322,6 +326,7 @@ export type Database = {
           owner_id?: string
           paid_at?: string
           reference?: string | null
+          reversal_of?: string | null
           sale_id?: string | null
         }
         Update: {
@@ -336,6 +341,7 @@ export type Database = {
           owner_id?: string
           paid_at?: string
           reference?: string | null
+          reversal_of?: string | null
           sale_id?: string | null
         }
         Relationships: [
@@ -351,6 +357,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "v_customer_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_reversal_of_fkey"
+            columns: ["reversal_of"]
+            isOneToOne: false
+            referencedRelation: "payments"
             referencedColumns: ["id"]
           },
           {
@@ -651,6 +664,7 @@ export type Database = {
         Row: {
           cogs: number
           created_at: string
+          credit_amount: number | null
           customer_id: string
           discount: number
           id: string
@@ -661,6 +675,8 @@ export type Database = {
           paid_amount: number
           pending_amount: number | null
           profit: number
+          received_amount: number | null
+          returned_amount: number
           sale_date: string
           status: Database["public"]["Enums"]["sale_status"]
           subtotal: number
@@ -670,6 +686,7 @@ export type Database = {
         Insert: {
           cogs?: number
           created_at?: string
+          credit_amount?: number | null
           customer_id: string
           discount?: number
           id?: string
@@ -680,6 +697,8 @@ export type Database = {
           paid_amount?: number
           pending_amount?: number | null
           profit?: number
+          received_amount?: number | null
+          returned_amount?: number
           sale_date?: string
           status?: Database["public"]["Enums"]["sale_status"]
           subtotal?: number
@@ -689,6 +708,7 @@ export type Database = {
         Update: {
           cogs?: number
           created_at?: string
+          credit_amount?: number | null
           customer_id?: string
           discount?: number
           id?: string
@@ -699,6 +719,8 @@ export type Database = {
           paid_amount?: number
           pending_amount?: number | null
           profit?: number
+          received_amount?: number | null
+          returned_amount?: number
           sale_date?: string
           status?: Database["public"]["Enums"]["sale_status"]
           subtotal?: number
@@ -831,6 +853,7 @@ export type Database = {
         Row: {
           active: boolean | null
           address: string | null
+          cancelled_orders: number | null
           city: string | null
           created_at: string | null
           id: string | null
@@ -839,10 +862,12 @@ export type Database = {
           name: string | null
           orders: number | null
           owner_id: string | null
+          total_credit: number | null
           total_paid: number | null
           total_pending: number | null
           total_profit: number | null
           total_purchased: number | null
+          total_returned: number | null
           whatsapp: string | null
         }
         Relationships: []
@@ -884,6 +909,10 @@ export type Database = {
       }
     }
     Functions: {
+      business_summary: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: Json
+      }
       cancel_sale: {
         Args: { p_reason?: string; p_sale_id: string }
         Returns: undefined
