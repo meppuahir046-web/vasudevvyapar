@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import { useI18n } from "@/lib/i18n";
 import {
   PAYMENT_METHODS,
   addPayment,
+  fetchBusinessSummary,
   fetchCustomerSummaries,
   fetchPayments,
   fetchSales,
@@ -70,12 +71,9 @@ function PaymentsPage() {
     enabled: !!customerId,
   });
 
-  const totals = useMemo(() => {
-    const rows = payments.data ?? [];
-    const received = rows.filter(isValidReceivedPayment).reduce((a, p) => a + num(p.amount), 0);
-    const dues = (customers.data ?? []).reduce((a, c) => a + num(c.total_pending), 0);
-    return { received, dues };
-  }, [payments.data, customers.data]);
+  const rangeArg = preset === "all" ? undefined : range;
+  const summary = useQuery({ queryKey: ["summary", rangeArg ?? "all"], queryFn: () => fetchBusinessSummary(rangeArg) });
+  const totals = summary.data;
 
   const outstanding = num((customers.data ?? []).find((c) => c.id === customerId)?.total_pending);
 
@@ -100,6 +98,7 @@ function PaymentsPage() {
       void qc.invalidateQueries({ queryKey: ["payments"] });
       void qc.invalidateQueries({ queryKey: ["customer-summaries"] });
       void qc.invalidateQueries({ queryKey: ["sales"] });
+      void qc.invalidateQueries({ queryKey: ["summary"] });
     },
     onError: (e: Error) => toast.error(friendlyError(e.message, t)),
   });
@@ -208,9 +207,11 @@ function PaymentsPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard label={t("dashboard.totalReceived")} value={money(totals.received)} tone="success" />
-        <StatCard label={t("dashboard.totalPending")} value={money(totals.dues)} tone="danger" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label={t("dashboard.totalReceived")} value={money(totals?.received ?? 0)} tone="success" />
+        <StatCard label={t("dashboard.totalPending")} value={money(totals?.pending ?? 0)} tone="danger" />
+        <StatCard label={t("fin.credit")} value={money(totals?.credit_due ?? 0)} />
+        <StatCard label={t("fin.returned")} value={money(totals?.returns_amount ?? 0)} />
       </div>
 
       <Card className="mt-4">
