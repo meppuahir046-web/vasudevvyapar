@@ -656,7 +656,7 @@ export type SaleItemNetRow = {
 };
 
 /** Item lines with invoice discount allocated proportionally (sum of net_amount = invoice total). */
-export async function fetchSaleItemsNet(opts: { range?: DateRange; customerId?: string; saleId?: string } = {}) {
+export async function fetchSaleItemsNet(opts: { range?: DateRange | undefined; customerId?: string; saleId?: string } = {}) {
   let q = db.from("v_sale_item_net").select("*").order("sale_date", { ascending: false });
   if (opts.range) q = q.gte("sale_date", opts.range.from).lte("sale_date", opts.range.to);
   if (opts.customerId) q = q.eq("customer_id", opts.customerId);
