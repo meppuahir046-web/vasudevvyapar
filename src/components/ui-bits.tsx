@@ -172,13 +172,15 @@ export function RangeFilter({
   );
 }
 
-export function StatusBadge({ status }: { status: "paid" | "partial" | "unpaid" | "cancelled" }) {
+export function StatusBadge({ status }: { status: "paid" | "partial" | "unpaid" | "cancelled" | "credit" | "returned" }) {
   const { t } = useI18n();
   const map = {
     paid: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
     partial: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
     unpaid: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
     cancelled: "bg-muted text-muted-foreground",
+    credit: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
+    returned: "bg-muted text-muted-foreground",
   } as const;
   const label = status === "cancelled" ? t("sales.cancelled") : t(`sales.status.${status}`);
   return (

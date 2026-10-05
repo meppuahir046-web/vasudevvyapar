@@ -16,8 +16,15 @@ import { AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState, Loading, PageHeader, StatCard, StatusBadge } from "@/components/ui-bits";
-import { fetchCustomerSummaries, fetchInventory, fetchSaleItems, fetchSales } from "@/lib/data";
-import { formatDate, money, monthKey, monthLabel, num, paymentStatus, presetRange, qty } from "@/lib/format";
+import {
+  fetchBusinessMonthly,
+  fetchBusinessSummary,
+  fetchCustomerSummaries,
+  fetchInventory,
+  fetchSales,
+  saleFinancialStatus,
+} from "@/lib/data";
+import { formatDate, money, monthLabel, num, presetRange, qty } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_app/dashboard")({
@@ -45,49 +52,33 @@ function compact(v: number) {
 
 function DashboardPage() {
   const { t } = useI18n();
+  const today = presetRange("today");
+  const month = presetRange("thisMonth");
   const inventory = useQuery({ queryKey: ["inventory"], queryFn: fetchInventory });
-  const sales = useQuery({ queryKey: ["sales", "all"], queryFn: () => fetchSales({ range: presetRange("all") }) });
+  const all = useQuery({ queryKey: ["summary", "all"], queryFn: () => fetchBusinessSummary() });
+  const todayS = useQuery({ queryKey: ["summary", today], queryFn: () => fetchBusinessSummary(today) });
+  const monthS = useQuery({ queryKey: ["summary", month], queryFn: () => fetchBusinessSummary(month) });
+  const series = useQuery({ queryKey: ["summary-monthly", "all"], queryFn: () => fetchBusinessMonthly() });
+  const sales = useQuery({ queryKey: ["sales", "recent"], queryFn: () => fetchSales({ status: "ACTIVE" }) });
   const customers = useQuery({ queryKey: ["customer-summaries"], queryFn: fetchCustomerSummaries });
-  const items = useQuery({ queryKey: ["sale-items", "all"], queryFn: () => fetchSaleItems({ range: presetRange("all") }) });
 
-  if (inventory.isLoading || sales.isLoading) return <Loading />;
+  if (inventory.isLoading || all.isLoading) return <Loading />;
 
   const inv = inventory.data ?? [];
-  const active = (sales.data ?? []).filter((s) => s.status === "ACTIVE");
-  const today = presetRange("today").from;
-  const month = monthKey(today);
-
-  const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
-  const totalSales = sum(active.map((s) => num(s.total)));
-  const totalPaid = sum(active.map((s) => num(s.paid_amount)));
-  const totalPending = sum(active.map((s) => num(s.pending_amount)));
-  const totalProfit = sum(active.map((s) => num(s.profit)));
-  const todaySales = active.filter((s) => s.sale_date === today);
-  const monthSales = active.filter((s) => monthKey(s.sale_date) === month);
+  const sum0 = all.data;
+  const active = sales.data ?? [];
   const lowStock = inv.filter((p) => p.is_low_stock && p.active);
 
-  const monthly = Object.values(
-    active.reduce<Record<string, { key: string; label: string; sales: number; profit: number }>>((acc, s) => {
-      const k = monthKey(s.sale_date);
-      acc[k] ??= { key: k, label: monthLabel(k), sales: 0, profit: 0 };
-      acc[k]!.sales += num(s.total);
-      acc[k]!.profit += num(s.profit);
-      return acc;
-    }, {}),
-  )
-    .sort((a, b) => a.key.localeCompare(b.key))
-    .slice(-12);
+  const monthly = (series.data ?? []).slice(-12).map((r) => ({
+    key: r.month,
+    label: monthLabel(r.month),
+    sales: r.net_sales,
+    profit: r.net_profit,
+  }));
 
-  const productSales = Object.values(
-    (items.data ?? [])
-      .filter((i) => i.sales?.status === "ACTIVE")
-      .reduce<Record<string, { name: string; amount: number }>>((acc, i) => {
-        const name = i.products?.name ?? "-";
-        acc[name] ??= { name, amount: 0 };
-        acc[name]!.amount += num(i.amount);
-        return acc;
-      }, {}),
-  )
+  const productSales = inv
+    .filter((p) => num(p.total_revenue) > 0)
+    .map((p) => ({ name: p.name, amount: num(p.total_revenue) }))
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 8);
 
@@ -109,29 +100,19 @@ function DashboardPage() {
       )}
 
       <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-        <StatCard label={t("dashboard.todaySales")} value={money(sum(todaySales.map((s) => num(s.total))))} />
-        <StatCard
-          label={t("dashboard.todayProfit")}
-          value={money(sum(todaySales.map((s) => num(s.profit))))}
-          tone="success"
-        />
-        <StatCard label={t("dashboard.monthSales")} value={money(sum(monthSales.map((s) => num(s.total))))} />
-        <StatCard
-          label={t("dashboard.monthProfit")}
-          value={money(sum(monthSales.map((s) => num(s.profit))))}
-          tone="success"
-        />
-        <StatCard label={t("dashboard.totalSales")} value={money(totalSales)} />
-        <StatCard label={t("dashboard.totalReceived")} value={money(totalPaid)} tone="success" />
-        <StatCard label={t("dashboard.totalPending")} value={money(totalPending)} tone="danger" />
-        <StatCard label={t("dashboard.totalProfit")} value={money(totalProfit)} tone="success" />
-        <StatCard label={t("dashboard.totalProducts")} value={String(inv.filter((p) => p.active).length)} />
-        <StatCard label={t("dashboard.totalCustomers")} value={String((customers.data ?? []).length)} />
-        <StatCard
-          label={t("dashboard.stockInvestment")}
-          value={money(sum(inv.map((p) => num(p.total_investment))))}
-        />
-        <StatCard label={t("dashboard.stockValue")} value={money(sum(inv.map((p) => num(p.stock_value))))} />
+        <StatCard label={t("dashboard.todaySales")} value={money(todayS.data?.net_sales ?? 0)} />
+        <StatCard label={t("dashboard.todayProfit")} value={money(todayS.data?.net_profit ?? 0)} tone="success" />
+        <StatCard label={t("dashboard.monthSales")} value={money(monthS.data?.net_sales ?? 0)} />
+        <StatCard label={t("dashboard.monthProfit")} value={money(monthS.data?.net_profit ?? 0)} tone="success" />
+        <StatCard label={t("dashboard.totalSales")} value={money(sum0?.net_sales ?? 0)} />
+        <StatCard label={t("dashboard.totalReceived")} value={money(sum0?.received ?? 0)} tone="success" />
+        <StatCard label={t("dashboard.totalPending")} value={money(sum0?.pending ?? 0)} tone="danger" />
+        <StatCard label={t("fin.credit")} value={money(sum0?.credit_due ?? 0)} />
+        <StatCard label={t("dashboard.totalProfit")} value={money(sum0?.net_profit ?? 0)} tone="success" />
+        <StatCard label={t("dashboard.totalProducts")} value={String(sum0?.products ?? 0)} />
+        <StatCard label={t("dashboard.totalCustomers")} value={String(sum0?.customers ?? 0)} />
+        <StatCard label={t("dashboard.stockInvestment")} value={money(sum0?.stock_investment ?? 0)} />
+        <StatCard label={t("dashboard.stockValue")} value={money(sum0?.stock_value ?? 0)} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -214,7 +195,7 @@ function DashboardPage() {
                     <TableCell className="text-sm">{s.customers?.name}</TableCell>
                     <TableCell className="text-right text-sm">{money(s.total)}</TableCell>
                     <TableCell>
-                      <StatusBadge status={paymentStatus(num(s.total), num(s.paid_amount))} />
+                      <StatusBadge status={saleFinancialStatus(s)} />
                     </TableCell>
                   </TableRow>
                 ))}

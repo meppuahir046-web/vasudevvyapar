@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +16,7 @@ import {
   TableScroll,
 } from "@/components/ui-bits";
 import { useI18n } from "@/lib/i18n";
-import { fetchSales } from "@/lib/data";
+import { fetchBusinessSummary, fetchSales, saleFinancialStatus } from "@/lib/data";
 import { formatDate, money, num, presetRange, type DateRange, type RangePreset } from "@/lib/format";
 
 export const Route = createFileRoute("/_app/sales/")({
@@ -31,14 +31,6 @@ export const Route = createFileRoute("/_app/sales/")({
   component: SalesPage,
 });
 
-function statusOf(s: { status: string; total: number; paid_amount: number }) {
-  if (s.status === "CANCELLED") return "cancelled" as const;
-  const paid = num(s.paid_amount);
-  const total = num(s.total);
-  if (paid >= total - 0.01) return "paid" as const;
-  return paid > 0 ? ("partial" as const) : ("unpaid" as const);
-}
-
 function SalesPage() {
   const { t } = useI18n();
   const [preset, setPreset] = useState<RangePreset>("all");
@@ -51,21 +43,14 @@ function SalesPage() {
   });
 
   const rows = sales.data ?? [];
-  const totals = useMemo(
-    () =>
-      rows
-        .filter((s) => s.status === "ACTIVE")
-        .reduce(
-          (a, s) => ({
-            total: a.total + num(s.total),
-            paid: a.paid + num(s.paid_amount),
-            pending: a.pending + num(s.pending_amount),
-            profit: a.profit + num(s.profit),
-          }),
-          { total: 0, paid: 0, pending: 0, profit: 0 },
-        ),
-    [rows],
-  );
+  const rangeArg = preset === "all" ? undefined : range;
+  const summary = useQuery({ queryKey: ["summary", rangeArg ?? "all"], queryFn: () => fetchBusinessSummary(rangeArg) });
+  const totals = {
+    total: summary.data?.net_sales ?? 0,
+    paid: summary.data?.received ?? 0,
+    pending: summary.data?.pending ?? 0,
+    profit: summary.data?.net_profit ?? 0,
+  };
 
   return (
     <div className="w-full min-w-0 max-w-full">
@@ -132,11 +117,11 @@ function SalesPage() {
                       </TableCell>
                       <TableCell>{formatDate(s.sale_date)}</TableCell>
                       <TableCell>{s.customers?.name ?? "-"}</TableCell>
-                      <TableCell className="text-right">{money(s.total)}</TableCell>
-                      <TableCell className="text-right">{money(s.paid_amount)}</TableCell>
+                      <TableCell className="text-right">{money(s.status === "CANCELLED" ? 0 : s.total)}</TableCell>
+                      <TableCell className="text-right">{money(s.received_amount)}</TableCell>
                       <TableCell className="text-right">{money(s.pending_amount)}</TableCell>
                       <TableCell>
-                        <StatusBadge status={statusOf(s)} />
+                        <StatusBadge status={saleFinancialStatus(s)} />
                       </TableCell>
                     </TableRow>
                   ))}

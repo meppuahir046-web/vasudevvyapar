@@ -9,17 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { EmptyState, Loading, PageHeader, RangeFilter, StatCard } from "@/components/ui-bits";
 import { useI18n } from "@/lib/i18n";
 import {
+  fetchBusinessMonthly,
+  fetchBusinessSummary,
   fetchCustomerSummaries,
   fetchInventory,
-  fetchPayments,
-  fetchPurchases,
-  fetchSaleItems,
-  fetchSales,
-  isValidReceivedPayment,
+  fetchSaleItemsNet,
 } from "@/lib/data";
 import { exportWorkbook } from "@/lib/excel";
 import {
-  monthKey,
   monthLabel,
   money,
   num,
@@ -51,60 +48,32 @@ function ReportsPage() {
   const [range, setRange] = useState<DateRange>(presetRange("all"));
   const [busy, setBusy] = useState(false);
 
-  const sales = useQuery({ queryKey: ["sales", range], queryFn: () => fetchSales({ range }) });
-  const items = useQuery({ queryKey: ["saleItems", range], queryFn: () => fetchSaleItems({ range }) });
-  const payments = useQuery({ queryKey: ["payments", range], queryFn: () => fetchPayments({ range }) });
-  const purchases = useQuery({ queryKey: ["purchases", range], queryFn: () => fetchPurchases(range) });
-  const inventory = useQuery({ queryKey: ["inventory"], queryFn: fetchInventory });
-  const customers = useQuery({ queryKey: ["customerSummaries"], queryFn: fetchCustomerSummaries });
+  const rangeArg = preset === "all" ? undefined : range;
+  const summary = useQuery({ queryKey: ["summary", rangeArg ?? "all"], queryFn: () => fetchBusinessSummary(rangeArg) });
+  const series = useQuery({ queryKey: ["summary-monthly", rangeArg ?? "all"], queryFn: () => fetchBusinessMonthly(rangeArg) });
+  const items = useQuery({ queryKey: ["sale-items-net", rangeArg ?? "all"], queryFn: () => fetchSaleItemsNet({ range: rangeArg }) });
+  const customers = useQuery({ queryKey: ["customer-summaries"], queryFn: fetchCustomerSummaries });
 
-  const active = useMemo(
-    () => (sales.data ?? []).filter((s) => s.status === "ACTIVE"),
-    [sales.data],
-  );
-
-  const totals = useMemo(() => {
-    const sold = active.reduce((a, s) => a + num(s.total), 0);
-    const profit = active.reduce((a, s) => a + num(s.profit), 0);
-    const received = (payments.data ?? []).filter(isValidReceivedPayment).reduce((a, p) => a + num(p.amount), 0);
-    const pending = active.reduce((a, s) => a + num(s.pending_amount), 0);
-    const stockIn = (purchases.data ?? []).reduce((a, p) => a + num(p.total_amount), 0);
-    const stockValue = (inventory.data ?? []).reduce((a, r) => a + num(r.stock_value), 0);
-    const activeCustomers = new Set(active.map((s) => s.customer_id)).size;
-    return { sold, profit, received, pending, stockIn, stockValue, activeCustomers, margin: sold ? (profit / sold) * 100 : 0 };
-  }, [active, payments.data, purchases.data, inventory.data]);
-
-  const monthly = useMemo(() => {
-    const map = new Map<string, { sales: number; profit: number; count: number; received: number }>();
-    active.forEach((s) => {
-      const k = monthKey(s.sale_date);
-      const row = map.get(k) ?? { sales: 0, profit: 0, count: 0, received: 0 };
-      row.sales += num(s.total);
-      row.profit += num(s.profit);
-      row.count += 1;
-      map.set(k, row);
-    });
-    (payments.data ?? []).forEach((p) => {
-      const k = monthKey(p.paid_at);
-      const row = map.get(k) ?? { sales: 0, profit: 0, count: 0, received: 0 };
-      if (isValidReceivedPayment(p)) row.received += num(p.amount);
-      map.set(k, row);
-    });
-    return [...map.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1));
-  }, [active, payments.data]);
+  const totals = summary.data;
+  const margin = totals && totals.net_sales ? (totals.net_profit / totals.net_sales) * 100 : 0;
+  const monthly = useMemo(() => [...(series.data ?? [])].reverse(), [series.data]);
+  const productNames = useQuery({ queryKey: ["inventory"], queryFn: fetchInventory });
 
   const topProducts = useMemo(() => {
-    const map = new Map<string, { name: string; quantity: number; amount: number; profit: number }>();
-    (items.data ?? []).forEach((it) => {
-      const id = it.product_id;
-      const row = map.get(id) ?? { name: it.products?.name ?? "—", quantity: 0, amount: 0, profit: 0 };
-      row.quantity += num(it.quantity) - num(it.returned_quantity);
-      row.amount += num(it.amount);
-      row.profit += num(it.profit);
-      map.set(id, row);
-    });
+    const names = new Map((productNames.data ?? []).map((p) => [p.id, p.name]));
+    const map = new Map<string, { name: string; quantity: number; amount: number; cogs: number; profit: number }>();
+    (items.data ?? [])
+      .filter((it) => it.status === "ACTIVE")
+      .forEach((it) => {
+        const row = map.get(it.product_id) ?? { name: names.get(it.product_id) ?? "—", quantity: 0, amount: 0, cogs: 0, profit: 0 };
+        row.quantity += num(it.remaining_quantity);
+        row.amount += num(it.net_amount);
+        row.cogs += num(it.net_cogs);
+        row.profit += num(it.net_profit);
+        map.set(it.product_id, row);
+      });
     return [...map.values()].sort((a, b) => b.amount - a.amount).slice(0, 10);
-  }, [items.data]);
+  }, [items.data, productNames.data]);
 
   const topCustomers = useMemo(
     () => [...(customers.data ?? [])].sort((a, b) => num(b.total_purchased) - num(a.total_purchased)).slice(0, 10),
@@ -123,7 +92,7 @@ function ReportsPage() {
     }
   };
 
-  const loading = sales.isLoading || items.isLoading || payments.isLoading;
+  const loading = summary.isLoading || series.isLoading;
 
   return (
     <div className="w-full min-w-0 max-w-full">
@@ -164,14 +133,18 @@ function ReportsPage() {
       </Card>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label={t("dashboard.totalSales")} value={money(totals.sold)} hint={`${active.length}`} />
-        <StatCard label={t("dashboard.profit")} value={money(totals.profit)} tone="success" />
-        <StatCard label={t("reports.profitMargin")} value={`${totals.margin.toFixed(1)}%`} tone="success" />
-        <StatCard label={t("dashboard.pending")} value={money(totals.pending)} tone="danger" />
-        <StatCard label={t("reports.payments")} value={money(totals.received)} />
-        <StatCard label={t("reports.stockIn")} value={money(totals.stockIn)} />
-        <StatCard label={t("reports.currentStock")} value={money(totals.stockValue)} />
-        <StatCard label={t("reports.activeCustomers")} value={String(totals.activeCustomers)} />
+        <StatCard label={t("fin.netSales")} value={money(totals?.net_sales ?? 0)} hint={`${totals?.orders ?? 0}`} />
+        <StatCard label={t("fin.returned")} value={money(totals?.returns_amount ?? 0)} />
+        <StatCard label={t("fin.cogs")} value={money(totals?.net_cogs ?? 0)} />
+        <StatCard label={t("dashboard.profit")} value={money(totals?.net_profit ?? 0)} tone="success" />
+        <StatCard label={t("reports.profitMargin")} value={`${margin.toFixed(1)}%`} tone="success" />
+        <StatCard label={t("dashboard.totalReceived")} value={money(totals?.received ?? 0)} tone="success" />
+        <StatCard label={t("dashboard.pending")} value={money(totals?.pending ?? 0)} tone="danger" />
+        <StatCard label={t("fin.credit")} value={money(totals?.credit_due ?? 0)} />
+        <StatCard label={t("fin.purchases")} value={money(totals?.purchases ?? 0)} />
+        <StatCard label={t("dashboard.stockInvestment")} value={money(totals?.stock_investment ?? 0)} />
+        <StatCard label={t("reports.currentStock")} value={money(totals?.stock_value ?? 0)} />
+        <StatCard label={t("fin.cancelledOrders")} value={`${totals?.cancelled_orders ?? 0}`} hint={money(totals?.cancelled_amount ?? 0)} />
       </div>
 
       <Card className="mb-4">
@@ -195,13 +168,13 @@ function ReportsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {monthly.map(([key, row]) => (
-                  <TableRow key={key}>
-                    <TableCell className="font-medium">{monthLabel(key)}</TableCell>
-                    <TableCell className="text-right">{row.count}</TableCell>
-                    <TableCell className="text-right">{money(row.sales)}</TableCell>
+                {monthly.map((row) => (
+                  <TableRow key={row.month}>
+                    <TableCell className="font-medium">{monthLabel(row.month)}</TableCell>
+                    <TableCell className="text-right">{row.orders}</TableCell>
+                    <TableCell className="text-right">{money(row.net_sales)}</TableCell>
                     <TableCell className="text-right text-emerald-600 dark:text-emerald-400">
-                      {money(row.profit)}
+                      {money(row.net_profit)}
                     </TableCell>
                     <TableCell className="text-right">{money(row.received)}</TableCell>
                   </TableRow>
