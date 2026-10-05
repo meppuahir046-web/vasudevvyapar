@@ -600,6 +600,13 @@ export type Database = {
             referencedRelation: "sale_items"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sale_return_items_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_sale_item_net"
+            referencedColumns: ["id"]
+          },
         ]
       }
       sale_returns: {
@@ -907,8 +914,82 @@ export type Database = {
           },
         ]
       }
+      v_sale_item_net: {
+        Row: {
+          customer_id: string | null
+          id: string | null
+          invoice_no: string | null
+          line_amount: number | null
+          net_amount: number | null
+          net_cogs: number | null
+          net_profit: number | null
+          original_amount: number | null
+          owner_id: string | null
+          product_id: string | null
+          quantity: number | null
+          rate: number | null
+          remaining_quantity: number | null
+          returned_amount: number | null
+          returned_quantity: number | null
+          sale_date: string | null
+          sale_id: string | null
+          status: Database["public"]["Enums"]["sale_status"] | null
+          unit: Database["public"]["Enums"]["unit_type"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "v_customer_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      business_monthly: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          credit_due: number
+          month: string
+          net_cogs: number
+          net_profit: number
+          net_sales: number
+          orders: number
+          pending: number
+          received: number
+          returns_amount: number
+        }[]
+      }
       business_summary: {
         Args: { p_from?: string; p_to?: string }
         Returns: Json
