@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { formatDate, qty } from "./format";
-import type { BusinessSettings, PaymentRow, SaleReturnRow, SaleRow } from "./data";
+import { saleFinancialStatus, type BusinessSettings, type PaymentRow, type SaleReturnRow, type SaleRow } from "./data";
 import { MIME, androidBridge, blobToBase64 } from "./native-bridge";
 
 
@@ -67,7 +67,7 @@ export type InvoicePayment = {
   reference?: string | null;
 };
 
-export type InvoiceStatus = "paid" | "partial" | "pending";
+export type InvoiceStatus = "paid" | "partial" | "pending" | "credit" | "cancelled" | "returned";
 
 export type InvoiceLabels = {
   invoice: string;
@@ -99,6 +99,11 @@ export type InvoiceLabels = {
   statusPaid: string;
   statusPartial: string;
   statusPending: string;
+  statusCredit: string;
+  statusCancelled: string;
+  statusReturned: string;
+  returnedAmount: string;
+  creditDue: string;
   paymentDetails: string;
   method: string;
   reference: string;
@@ -143,6 +148,8 @@ export type InvoiceData = {
   total: number;
   paid: number;
   pending: number;
+  creditDue: number;
+  returnedAmount: number;
   payments?: InvoicePayment[];
   customerOutstanding?: number | null;
   notes?: string | null;
@@ -150,11 +157,14 @@ export type InvoiceData = {
 };
 
 function statusOf(sale: SaleRow): InvoiceStatus {
-  const total = Number(sale.total);
-  const paid = Number(sale.paid_amount);
-  if (paid >= total - 0.009) return "paid";
-  if (paid > 0) return "partial";
-  return "pending";
+  return saleFinancialStatus({
+    status: sale.status,
+    total: sale.total,
+    pending_amount: sale.pending_amount,
+    received_amount: sale.received_amount,
+    credit_amount: sale.credit_amount,
+    returned_amount: sale.returned_amount,
+  });
 }
 
 export function saleToInvoice(
@@ -203,9 +213,11 @@ export function saleToInvoice(
       .filter((l) => l.quantity > 0),
     subtotal: Number(sale.subtotal),
     discount: Number(sale.discount),
-    total: Number(sale.total),
-    paid: Number(sale.paid_amount),
-    pending: Number(sale.pending_amount),
+    total: sale.status === "CANCELLED" ? 0 : Number(sale.total),
+    paid: Number(sale.received_amount),
+    pending: Math.max(0, Number(sale.pending_amount)),
+    creditDue: Math.max(0, Number(sale.credit_amount)),
+    returnedAmount: Math.max(0, Number(sale.returned_amount)),
     payments: (extra.payments ?? [])
       .filter((p) => !p.is_reversal)
       .map((p) => ({
@@ -445,11 +457,31 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   };
 
   const statusText =
-    data.status === "paid" ? L.statusPaid : data.status === "partial" ? L.statusPartial : L.statusPending;
+    data.status === "paid"
+      ? L.statusPaid
+      : data.status === "partial"
+        ? L.statusPartial
+        : data.status === "credit"
+          ? L.statusCredit
+          : data.status === "cancelled"
+            ? L.statusCancelled
+            : data.status === "returned"
+              ? L.statusReturned
+              : L.statusPending;
 
   const drawStatusPill = (yy: number) => {
     const color =
-      data.status === "paid" ? { r: 22, g: 122, b: 78 } : data.status === "partial" ? { r: 191, g: 129, b: 20 } : { r: 178, g: 52, b: 45 };
+      data.status === "paid"
+        ? { r: 22, g: 122, b: 78 }
+        : data.status === "partial"
+          ? { r: 191, g: 129, b: 20 }
+          : data.status === "credit"
+            ? { r: 13, g: 106, b: 84 }
+            : data.status === "cancelled"
+              ? { r: 120, g: 120, b: 120 }
+              : data.status === "returned"
+                ? { r: 90, g: 110, b: 130 }
+                : { r: 178, g: 52, b: 45 };
     setFont("bold");
     doc.setFontSize(10);
     const label = `${statusText}`;
@@ -580,8 +612,9 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   /* ------------------------- totals & tail blocks ------------------------- */
   const totalsRows: [string, string, boolean][] = [[L.subtotal, money(data.subtotal), false]];
   if (data.discount > 0) totalsRows.push([L.discount, `- ${money(data.discount)}`, false]);
+  if (data.returnedAmount > 0.009) totalsRows.push([L.returnedAmount, `- ${money(data.returnedAmount)}`, false]);
   if (data.tax && data.tax > 0) totalsRows.push([L.tax, money(data.tax), false]);
-  const totalsH = 34 + totalsRows.length * 16 + 3 * 18;
+  const totalsH = 34 + totalsRows.length * 16 + (data.creditDue > 0.009 ? 18 : 0) + 3 * 18;
 
   if (y + totalsH > bottomLimit) {
     doc.addPage();
@@ -623,6 +656,12 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<jsPDF> {
   if (data.pending > 0.009) doc.setTextColor(178, 52, 45);
   row(L.pending, money(data.pending), { bold: true });
   ink();
+  if (data.creditDue > 0.009) {
+    ty += 17;
+    doc.setTextColor(BRAND.r, BRAND.g, BRAND.b);
+    row(L.creditDue, money(data.creditDue), { bold: true });
+    ink();
+  }
 
   // left column: payments / balance / notes / terms
   let ly = boxY;

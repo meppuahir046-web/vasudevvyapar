@@ -95,6 +95,9 @@ export type CustomerSummaryRow = {
   total_paid: number;
   total_pending: number;
   total_profit: number;
+  total_credit: number;
+  total_returned: number;
+  cancelled_orders: number;
   last_sale: string | null;
 };
 

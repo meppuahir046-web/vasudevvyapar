@@ -14,13 +14,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { EmptyState, Loading, PageHeader, RangeFilter, StatCard } from "@/components/ui-bits";
 import { useI18n } from "@/lib/i18n";
 import { addPurchase, addSupplier, fetchProducts, fetchPurchases, fetchSuppliers, type Unit } from "@/lib/data";
-import { formatDate, money, num, presetRange, qty, toISODate, type DateRange, type RangePreset } from "@/lib/format";
+import { formatDate, money, moneyPlain, num, presetRange, qty, toISODate, type DateRange, type RangePreset } from "@/lib/format";
+
+function purchaseLineTotal(quantity: string, costPerUnit: string): number {
+  const q = num(quantity);
+  const c = num(costPerUnit);
+  if (q <= 0 || c < 0) return 0;
+  return moneyPlain(q * c);
+}
 
 export const Route = createFileRoute("/_app/purchases")({
   head: () => ({
     meta: [
       { title: "Stock In & Purchases — RetailBook" },
-      { name: "description", content: "Record stock purchases with supplier, quantity and total amount; cost per unit is calculated automatically." },
+      { name: "description", content: "Record stock purchases with supplier, quantity and price per unit; total purchase amount is calculated automatically." },
       { property: "og:title", content: "Stock In & Purchases — RetailBook" },
       { property: "og:description", content: "Record purchases and keep weighted average cost accurate." },
     ],
@@ -40,7 +47,7 @@ function PurchasesPage() {
   const [date, setDate] = useState(toISODate(new Date()));
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState<Unit>("KG");
-  const [total, setTotal] = useState("");
+  const [costPerUnit, setCostPerUnit] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -51,7 +58,7 @@ function PurchasesPage() {
     queryFn: () => fetchPurchases(range),
   });
 
-  const costPerUnit = num(quantity) > 0 ? num(total) / num(quantity) : 0;
+  const totalAmount = useMemo(() => purchaseLineTotal(quantity, costPerUnit), [quantity, costPerUnit]);
 
   const totals = useMemo(() => {
     const list = purchases ?? [];
@@ -69,13 +76,14 @@ function PurchasesPage() {
         const created = await addSupplier(newSupplier.trim());
         sid = (created as { id: string }).id;
       }
+      const lineTotal = purchaseLineTotal(quantity, costPerUnit);
       return addPurchase({
         product_id: productId,
         supplier_id: sid,
         purchase_date: date,
         quantity: num(quantity),
         unit,
-        total_amount: num(total),
+        total_amount: lineTotal,
         invoice_no: invoiceNo.trim() || null,
         notes: notes.trim() || null,
       });
@@ -84,7 +92,7 @@ function PurchasesPage() {
       toast.success(t("purchases.saved"));
       setOpen(false);
       setQuantity("");
-      setTotal("");
+      setCostPerUnit("");
       setInvoiceNo("");
       setNotes("");
       setNewSupplier("");
@@ -93,7 +101,11 @@ function PurchasesPage() {
     onError: (e: Error) => toast.error(e.message || t("common.error")),
   });
 
-  const canSave = productId && num(quantity) > 0 && num(total) > 0;
+  const canSave =
+    productId &&
+    num(quantity) > 0 &&
+    num(costPerUnit) >= 0 &&
+    Number.isFinite(totalAmount);
 
   return (
     <div className="w-full min-w-0 max-w-full">
@@ -144,16 +156,29 @@ function PurchasesPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>{t("common.quantity")}</Label>
-                    <Input type="number" min="0" step="0.001" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                    />
                   </div>
                   <div>
-                    <Label>{t("purchases.totalAmount")}</Label>
-                    <Input type="number" min="0" step="0.01" value={total} onChange={(e) => setTotal(e.target.value)} />
+                    <Label>{t("purchases.pricePerUnit")}</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={costPerUnit}
+                      onChange={(e) => setCostPerUnit(e.target.value)}
+                    />
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {t("purchases.costPerUnit")}: <span className="font-semibold text-foreground">{money(costPerUnit)}</span>
-                </p>
+                <div>
+                  <Label>{t("purchases.totalAmount")}</Label>
+                  <Input readOnly className="bg-muted font-semibold" value={money(totalAmount)} tabIndex={-1} />
+                </div>
                 <div>
                   <Label>{t("common.supplier")}</Label>
                   <Select value={supplierId} onValueChange={setSupplierId}>

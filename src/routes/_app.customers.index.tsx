@@ -46,7 +46,9 @@ function CustomersPage() {
     return {
       count: list.length,
       purchased: list.reduce((a, c) => a + num(c.total_purchased), 0),
+      received: list.reduce((a, c) => a + num(c.total_paid), 0),
       pending: list.reduce((a, c) => a + num(c.total_pending), 0),
+      credit: list.reduce((a, c) => a + num(c.total_credit), 0),
     };
   }, [data]);
 
@@ -123,9 +125,10 @@ function CustomersPage() {
         }
       />
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label={t("dashboard.totalCustomers")} value={String(totals.count)} />
-        <StatCard label={t("customers.totalPurchased")} value={money(totals.purchased)} />
+        <StatCard label={t("customers.netPurchased")} value={money(totals.purchased)} />
+        <StatCard label={t("customers.totalReceived")} value={money(totals.received)} tone="success" />
         <StatCard label={t("customers.totalPending")} value={money(totals.pending)} tone="warning" />
       </div>
 
@@ -149,9 +152,12 @@ function CustomersPage() {
                   <TableHead>{t("common.name")}</TableHead>
                   <TableHead>{t("common.mobile")}</TableHead>
                   <TableHead className="text-right">{t("customers.orders")}</TableHead>
-                  <TableHead className="text-right">{t("customers.totalPurchased")}</TableHead>
-                  <TableHead className="text-right">{t("customers.totalPaid")}</TableHead>
+                  <TableHead className="text-right">{t("customers.netPurchased")}</TableHead>
+                  <TableHead className="text-right">{t("customers.totalReceived")}</TableHead>
                   <TableHead className="text-right">{t("customers.totalPending")}</TableHead>
+                  <TableHead className="text-right">{t("customers.totalCredit")}</TableHead>
+                  <TableHead className="text-right">{t("customers.totalReturned")}</TableHead>
+                  <TableHead className="text-right">{t("customers.cancelledOrders")}</TableHead>
                   <TableHead>{t("inventory.lastSale")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -173,6 +179,9 @@ function CustomersPage() {
                     >
                       {money(c.total_pending)}
                     </TableCell>
+                    <TableCell className="text-right">{money(c.total_credit)}</TableCell>
+                    <TableCell className="text-right">{money(c.total_returned)}</TableCell>
+                    <TableCell className="text-right">{c.cancelled_orders}</TableCell>
                     <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                       {c.last_sale ? formatDate(c.last_sale) : "-"}
                     </TableCell>

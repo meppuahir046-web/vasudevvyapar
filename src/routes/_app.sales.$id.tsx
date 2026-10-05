@@ -543,7 +543,7 @@ function SaleDetailPage() {
               )}
               <SummaryRow label={t("sales.grandTotal")} value={money(s.total)} strong />
               {cancelled && <SummaryRow label={t("fin.activeAmount")} value={money(0)} strong />}
-              <SummaryRow label={t("common.paid")} value={money(s.received_amount)} />
+              <SummaryRow label={t("customers.totalReceived")} value={money(s.received_amount)} />
               <SummaryRow label={t("common.pending")} value={money(s.pending_amount)} />
               {num(s.credit_amount) > 0 && <SummaryRow label={t("fin.credit")} value={money(s.credit_amount)} />}
               <SummaryRow label={t("common.profit")} value={money(cancelled ? 0 : s.profit)} />

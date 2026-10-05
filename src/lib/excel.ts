@@ -2,6 +2,8 @@ import * as XLSX from "xlsx";
 import { MIME, androidBridge } from "./native-bridge";
 
 import {
+  fetchBusinessMonthly,
+  fetchBusinessSummary,
   fetchCustomerSummaries,
   fetchInventory,
   fetchLedger,
@@ -9,10 +11,9 @@ import {
   fetchProducts,
   fetchPurchases,
   fetchReturns,
-  fetchSaleItems,
+  fetchSaleItemsNet,
   fetchSales,
   fetchSettings,
-  isValidReceivedPayment,
 } from "./data";
 import { monthKey, monthLabel, moneyPlain, num, type DateRange } from "./format";
 
@@ -26,45 +27,28 @@ function addSheets(wb: XLSX.WorkBook, sheets: Sheet[]) {
 }
 
 export async function exportWorkbook(range: DateRange, fileLabel: string, delivery: "download" | "share" = "download") {
-  const [settings, products, inventory, purchases, sales, cancelledSales, saleItems, payments, customers, returns, ledger] =
+  const [settings, products, inventory, purchases, sales, summary, monthly, saleItems, payments, customers, returns, ledger] =
     await Promise.all([
       fetchSettings(),
       fetchProducts(),
       fetchInventory(),
       fetchPurchases(range),
       fetchSales({ range }),
-      fetchSales({ range, status: "CANCELLED" }),
-      fetchSaleItems({ range, includeCancelled: true }),
+      fetchBusinessSummary(range),
+      fetchBusinessMonthly(range),
+      fetchSaleItemsNet({ range }),
       fetchPayments({ range }),
       fetchCustomerSummaries(),
       fetchReturns(range),
       fetchLedger(undefined, range),
     ]);
 
-  const activeSales = sales.filter((s) => s.status === "ACTIVE");
-  const returnedAmount = returns.reduce((sum, item) => sum + num(item.total_amount), 0);
-  const grossSales = activeSales.reduce((sum, sale) => sum + num(sale.total), 0) + returnedAmount;
-  const netSales = activeSales.reduce((sum, sale) => sum + num(sale.total), 0);
-
-  // Monthly summary
-  const byMonth = new Map<string, { sales: number; profit: number; paid: number; pending: number; orders: number }>();
-  activeSales.forEach((s) => {
-    const key = monthKey(s.sale_date);
-    const cur = byMonth.get(key) ?? { sales: 0, profit: 0, paid: 0, pending: 0, orders: 0 };
-    cur.sales += num(s.total);
-    cur.profit += num(s.profit);
-    cur.paid += num(s.paid_amount);
-    cur.pending += num(s.pending_amount);
-    cur.orders += 1;
-    byMonth.set(key, cur);
-  });
-
+  const productNames = new Map(products.map((p) => [p.id, p.name]));
   const purchasesByMonth = new Map<string, number>();
   purchases.forEach((p) => {
     const key = monthKey(p.purchase_date);
     purchasesByMonth.set(key, (purchasesByMonth.get(key) ?? 0) + num(p.total_amount));
   });
-
   const wb = XLSX.utils.book_new();
 
   addSheets(wb, [
@@ -76,31 +60,37 @@ export async function exportWorkbook(range: DateRange, fileLabel: string, delive
         { Metric: "Generated", Value: new Date().toLocaleString("en-GB") },
         { Metric: "Products", Value: products.length },
         { Metric: "Customers", Value: customers.length },
-        { Metric: "Orders", Value: activeSales.length },
-        { Metric: "Gross Sales", Value: moneyPlain(grossSales) },
-        { Metric: "Returns", Value: moneyPlain(returnedAmount) },
-        { Metric: "Cancelled Sales", Value: moneyPlain(cancelledSales.reduce((sum, sale) => sum + num(sale.total), 0)) },
-        { Metric: "Net Sales", Value: moneyPlain(netSales) },
-        { Metric: "Received", Value: moneyPlain(payments.filter(isValidReceivedPayment).reduce((a, p) => a + num(p.amount), 0)) },
-        { Metric: "Pending", Value: moneyPlain(activeSales.reduce((a, s) => a + num(s.pending_amount), 0)) },
-        { Metric: "Net Profit", Value: moneyPlain(activeSales.reduce((a, s) => a + num(s.profit), 0)) },
-        { Metric: "Stock Purchases", Value: moneyPlain(purchases.reduce((a, p) => a + num(p.total_amount), 0)) },
-        { Metric: "Stock Value", Value: moneyPlain(inventory.reduce((a, p) => a + num(p.stock_value), 0)) },
+        { Metric: "Orders", Value: summary.orders },
+        { Metric: "Gross Sales", Value: moneyPlain(summary.gross_sales) },
+        { Metric: "Returns", Value: moneyPlain(summary.returns_amount) },
+        { Metric: "Cancelled Sales", Value: moneyPlain(summary.cancelled_amount) },
+        { Metric: "Cancelled Orders", Value: summary.cancelled_orders },
+        { Metric: "Net Sales", Value: moneyPlain(summary.net_sales) },
+        { Metric: "COGS", Value: moneyPlain(summary.net_cogs) },
+        { Metric: "Net Profit", Value: moneyPlain(summary.net_profit) },
+        { Metric: "Received", Value: moneyPlain(summary.received) },
+        { Metric: "Pending", Value: moneyPlain(summary.pending) },
+        { Metric: "Credit / Refund Due", Value: moneyPlain(summary.credit_due) },
+        { Metric: "Stock Purchases", Value: moneyPlain(summary.purchases) },
+        { Metric: "Stock Investment", Value: moneyPlain(summary.stock_investment) },
+        { Metric: "Stock Value", Value: moneyPlain(summary.stock_value) },
       ],
     },
     {
       name: "Monthly Summary",
-      rows: [...byMonth.entries()]
-        .sort()
-        .map(([key, v]) => ({
-          Month: monthLabel(key),
+      rows: [...monthly]
+        .sort((a, b) => a.month.localeCompare(b.month))
+        .map((v) => ({
+          Month: monthLabel(v.month),
           Orders: v.orders,
-          Sales: moneyPlain(v.sales),
-          Received: moneyPlain(v.paid),
+          Sales: moneyPlain(v.net_sales),
+          Received: moneyPlain(v.received),
           Pending: moneyPlain(v.pending),
-          Profit: moneyPlain(v.profit),
-          "Stock Purchased": moneyPlain(purchasesByMonth.get(key) ?? 0),
-          "Margin %": v.sales ? Math.round((v.profit / v.sales) * 1000) / 10 : 0,
+          "Credit / Refund Due": moneyPlain(v.credit_due),
+          Returns: moneyPlain(v.returns_amount),
+          Profit: moneyPlain(v.net_profit),
+          "Stock Purchased": moneyPlain(purchasesByMonth.get(v.month) ?? 0),
+          "Margin %": v.net_sales ? Math.round((v.net_profit / v.net_sales) * 1000) / 10 : 0,
         })),
     },
     {
@@ -156,29 +146,33 @@ export async function exportWorkbook(range: DateRange, fileLabel: string, delive
         Mobile: s.customers?.mobile ?? "",
         Subtotal: moneyPlain(s.subtotal),
         Discount: moneyPlain(s.discount),
-        Total: moneyPlain(s.total),
-        Paid: moneyPlain(s.paid_amount),
+        Returned: moneyPlain(s.returned_amount),
+        Total: moneyPlain(s.status === "CANCELLED" ? 0 : s.total),
+        Received: moneyPlain(s.received_amount),
         Pending: moneyPlain(s.pending_amount),
-        COGS: moneyPlain(s.cogs),
-        Profit: moneyPlain(s.profit),
+        "Credit / Refund Due": moneyPlain(s.credit_amount),
+        COGS: moneyPlain(s.status === "CANCELLED" ? 0 : s.cogs),
+        Profit: moneyPlain(s.status === "CANCELLED" ? 0 : s.profit),
         Status: s.status,
       })),
     },
     {
       name: "Sale Items",
       rows: saleItems.map((i) => ({
-        Date: i.sales?.sale_date ?? "",
-        Invoice: i.sales?.invoice_no ?? "",
-        Customer: i.sales?.customers?.name ?? "",
-        Product: i.products?.name ?? "",
-        Quantity: num(i.quantity),
+        Date: i.sale_date,
+        Invoice: i.invoice_no,
+        Product: productNames.get(i.product_id) ?? i.product_id,
+        "Original Qty": num(i.quantity),
         Returned: num(i.returned_quantity),
+        Remaining: num(i.remaining_quantity),
         Unit: i.unit,
         Rate: moneyPlain(i.rate),
-        Amount: moneyPlain(i.amount),
-        "Unit Cost": moneyPlain(i.unit_cost),
-        Profit: moneyPlain(i.profit),
-        Status: i.sales?.status ?? "",
+        "Original Amount": moneyPlain(i.original_amount),
+        "Returned Amount": moneyPlain(i.returned_amount),
+        "Net Amount": moneyPlain(i.net_amount),
+        "Net COGS": moneyPlain(i.net_cogs),
+        "Net Profit": moneyPlain(i.net_profit),
+        Status: i.status,
       })),
     },
     {
@@ -203,9 +197,12 @@ export async function exportWorkbook(range: DateRange, fileLabel: string, delive
         City: c.city ?? "",
         Address: c.address ?? "",
         Orders: num(c.orders),
-        Purchased: moneyPlain(c.total_purchased),
-        Paid: moneyPlain(c.total_paid),
+        "Net Purchased": moneyPlain(c.total_purchased),
+        Received: moneyPlain(c.total_paid),
         Pending: moneyPlain(c.total_pending),
+        "Credit / Refund Due": moneyPlain(c.total_credit),
+        Returned: moneyPlain(c.total_returned),
+        "Cancelled Orders": num(c.cancelled_orders),
         Profit: moneyPlain(c.total_profit),
         "Last Sale": c.last_sale ?? "",
         Active: c.active ? "Yes" : "No",
@@ -275,4 +272,3 @@ export async function exportWorkbook(range: DateRange, fileLabel: string, delive
 export function shareWorkbook(range: DateRange, fileLabel: string) {
   return exportWorkbook(range, fileLabel, "share");
 }
-

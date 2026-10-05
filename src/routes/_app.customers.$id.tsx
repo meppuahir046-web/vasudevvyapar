@@ -21,12 +21,22 @@ import {
   fetchCustomerSummary,
   fetchPayments,
   fetchProducts,
-  fetchSaleItems,
+  fetchSaleItemsNet,
   fetchSales,
+  saleFinancialStatus,
   saveCustomer,
   saveCustomerPrice,
+  type SaleRow,
 } from "@/lib/data";
-import { formatDate, money, num, paymentStatus, qty } from "@/lib/format";
+import { formatDate, money, num, qty } from "@/lib/format";
+
+function saleOriginalAmount(s: SaleRow) {
+  return num(s.total) + num(s.returned_amount);
+}
+
+function saleNetAmount(s: SaleRow) {
+  return s.status === "CANCELLED" ? 0 : num(s.total);
+}
 
 export const Route = createFileRoute("/_app/customers/$id")({
   head: () => ({
@@ -49,7 +59,7 @@ function CustomerDetail() {
   const summary = useQuery({ queryKey: ["customer-summary", id], queryFn: () => fetchCustomerSummary(id) });
   const sales = useQuery({ queryKey: ["customer-sales", id], queryFn: () => fetchSales({ customerId: id }) });
   const payments = useQuery({ queryKey: ["customer-payments", id], queryFn: () => fetchPayments({ customerId: id }) });
-  const items = useQuery({ queryKey: ["customer-items", id], queryFn: () => fetchSaleItems({ customerId: id }) });
+  const items = useQuery({ queryKey: ["customer-items-net", id], queryFn: () => fetchSaleItemsNet({ customerId: id }) });
   const prices = useQuery({ queryKey: ["customer-prices", id], queryFn: () => fetchCustomerPrices(id) });
   const products = useQuery({ queryKey: ["products"], queryFn: () => fetchProducts(false) });
 
@@ -137,15 +147,19 @@ function CustomerDetail() {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label={t("customers.orders")} value={String(num(s?.orders))} />
-        <StatCard label={t("customers.totalPurchased")} value={money(s?.total_purchased)} />
-        <StatCard label={t("customers.totalPaid")} value={money(s?.total_paid)} tone="success" />
+        <StatCard label={t("customers.netPurchased")} value={money(s?.total_purchased)} />
+        <StatCard label={t("customers.totalReceived")} value={money(s?.total_paid)} tone="success" />
         <StatCard
           label={t("customers.totalPending")}
           value={money(s?.total_pending)}
           tone={num(s?.total_pending) > 0 ? "danger" : "default"}
         />
+        <StatCard label={t("customers.totalCredit")} value={money(s?.total_credit)} />
+        <StatCard label={t("customers.totalReturned")} value={money(s?.total_returned)} />
+        <StatCard label={t("customers.cancelledOrders")} value={String(num(s?.cancelled_orders))} />
+        <StatCard label={t("common.profit")} value={money(s?.total_profit)} tone="success" />
       </div>
 
       <Tabs defaultValue="sales" className="mt-6 min-w-0">
@@ -171,9 +185,12 @@ function CustomerDetail() {
                     <TableRow>
                       <TableHead>{t("common.date")}</TableHead>
                       <TableHead>{t("common.invoice")}</TableHead>
-                      <TableHead className="text-right">{t("common.total")}</TableHead>
-                      <TableHead className="text-right">{t("common.paid")}</TableHead>
+                      <TableHead className="text-right">{t("fin.originalAmount")}</TableHead>
+                      <TableHead className="text-right">{t("fin.returnedAmount")}</TableHead>
+                      <TableHead className="text-right">{t("fin.netAmount")}</TableHead>
+                      <TableHead className="text-right">{t("customers.totalReceived")}</TableHead>
                       <TableHead className="text-right">{t("common.pending")}</TableHead>
+                      <TableHead className="text-right">{t("fin.credit")}</TableHead>
                       <TableHead>{t("common.status")}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -186,17 +203,14 @@ function CustomerDetail() {
                             {sale.invoice_no}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-right">{money(sale.total)}</TableCell>
-                        <TableCell className="text-right">{money(sale.paid_amount)}</TableCell>
+                        <TableCell className="text-right">{money(saleOriginalAmount(sale))}</TableCell>
+                        <TableCell className="text-right">{money(sale.returned_amount)}</TableCell>
+                        <TableCell className="text-right font-medium">{money(saleNetAmount(sale))}</TableCell>
+                        <TableCell className="text-right">{money(sale.received_amount)}</TableCell>
                         <TableCell className="text-right">{money(sale.pending_amount)}</TableCell>
+                        <TableCell className="text-right">{money(sale.credit_amount)}</TableCell>
                         <TableCell>
-                          <StatusBadge
-                            status={
-                              sale.status === "CANCELLED"
-                                ? "cancelled"
-                                : paymentStatus(num(sale.total), num(sale.paid_amount))
-                            }
-                          />
+                          <StatusBadge status={saleFinancialStatus(sale)} />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -248,22 +262,28 @@ function CustomerDetail() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("common.date")}</TableHead>
+                      <TableHead>{t("common.invoice")}</TableHead>
                       <TableHead>{t("common.product")}</TableHead>
-                      <TableHead className="text-right">{t("common.quantity")}</TableHead>
+                      <TableHead className="text-right">{t("fin.originalQty")}</TableHead>
+                      <TableHead className="text-right">{t("fin.returnedQty")}</TableHead>
+                      <TableHead className="text-right">{t("fin.remainingQty")}</TableHead>
                       <TableHead className="text-right">{t("common.rate")}</TableHead>
-                      <TableHead className="text-right">{t("common.amount")}</TableHead>
+                      <TableHead className="text-right">{t("fin.netAmount")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {(items.data ?? []).map((i) => (
                       <TableRow key={i.id}>
-                        <TableCell>{formatDate(i.sales?.sale_date)}</TableCell>
-                        <TableCell>{i.products?.name ?? "-"}</TableCell>
+                        <TableCell>{formatDate(i.sale_date)}</TableCell>
+                        <TableCell className="whitespace-nowrap text-xs">{i.invoice_no}</TableCell>
+                        <TableCell>{productMap.get(i.product_id)?.name ?? "-"}</TableCell>
                         <TableCell className="text-right">
-                          {qty(i.quantity)} {i.unit}
+                          {qty(i.quantity)} {t(`unit.${i.unit}`)}
                         </TableCell>
+                        <TableCell className="text-right">{qty(i.returned_quantity)}</TableCell>
+                        <TableCell className="text-right">{qty(i.remaining_quantity)}</TableCell>
                         <TableCell className="text-right">{money(i.rate)}</TableCell>
-                        <TableCell className="text-right">{money(i.amount)}</TableCell>
+                        <TableCell className="text-right">{money(i.net_amount)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
