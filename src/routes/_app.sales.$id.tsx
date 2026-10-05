@@ -40,6 +40,7 @@ import {
   fetchSale,
   fetchSettings,
   friendlyError,
+  saleFinancialStatus,
   type PaymentMethod,
 } from "@/lib/data";
 import { formatDate, money, num, qty, toISODate } from "@/lib/format";
@@ -182,14 +183,15 @@ function SaleDetailPage() {
   if (sale.isLoading) return <Loading />;
   if (!s) return <EmptyState />;
 
-  const status =
-    s.status === "CANCELLED"
-      ? ("cancelled" as const)
-      : num(s.paid_amount) >= num(s.total) - 0.01
-        ? ("paid" as const)
-        : num(s.paid_amount) > 0
-          ? ("partial" as const)
-          : ("unpaid" as const);
+  const status = saleFinancialStatus(s);
+  const cancelled = s.status === "CANCELLED";
+  const line = (i: { quantity: number; returned_quantity: number; rate: number; amount: number; profit: number }) => ({
+    original: Math.round(num(i.quantity) * num(i.rate) * 100) / 100,
+    returned: Math.round(num(i.returned_quantity) * num(i.rate) * 100) / 100,
+    net: cancelled ? 0 : num(i.amount),
+    remaining: cancelled ? 0 : num(i.quantity) - num(i.returned_quantity),
+    profit: cancelled ? 0 : num(i.profit),
+  });
 
   const invoice = () =>
     saleToInvoice(s, settings.data ?? null, invoiceLabels(t), {
@@ -460,24 +462,23 @@ function SaleDetailPage() {
                     )}
                   </p>
                   <dl className="mt-2 space-y-1.5">
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-muted-foreground">{t("common.quantity")}</dt>
-                      <dd className="shrink-0 text-right tabular-nums">
-                        {qty(i.quantity)} {t(`unit.${i.unit}`)}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-muted-foreground">{t("common.rate")}</dt>
-                      <dd className="shrink-0 text-right tabular-nums">{money(i.rate)}</dd>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-muted-foreground">{t("common.amount")}</dt>
-                      <dd className="shrink-0 text-right font-medium tabular-nums">{money(i.amount)}</dd>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-muted-foreground">{t("common.profit")}</dt>
-                      <dd className="shrink-0 text-right tabular-nums">{money(i.profit)}</dd>
-                    </div>
+                    {(
+                      [
+                        [t("fin.originalQty"), `${qty(i.quantity)} ${t(`unit.${i.unit}`)}`],
+                        [t("fin.returnedQty"), qty(i.returned_quantity)],
+                        [t("fin.remainingQty"), qty(line(i).remaining)],
+                        [t("common.rate"), money(i.rate)],
+                        [t("fin.originalAmount"), money(line(i).original)],
+                        [t("fin.returnedAmount"), money(line(i).returned)],
+                        [t("fin.netAmount"), money(line(i).net)],
+                        [t("common.profit"), money(line(i).profit)],
+                      ] as const
+                    ).map(([k, v]) => (
+                      <div key={k} className="flex justify-between gap-3">
+                        <dt className="text-muted-foreground">{k}</dt>
+                        <dd className="shrink-0 text-right tabular-nums">{v}</dd>
+                      </div>
+                    ))}
                   </dl>
                 </div>
               ))}
@@ -487,9 +488,13 @@ function SaleDetailPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="min-w-[8rem]">{t("common.product")}</TableHead>
-                    <TableHead className="text-right whitespace-nowrap">{t("common.quantity")}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t("fin.originalQty")}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t("fin.returnedQty")}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t("fin.remainingQty")}</TableHead>
                     <TableHead className="text-right whitespace-nowrap">{t("common.rate")}</TableHead>
-                    <TableHead className="text-right whitespace-nowrap">{t("common.amount")}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t("fin.originalAmount")}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t("fin.returnedAmount")}</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">{t("fin.netAmount")}</TableHead>
                     <TableHead className="text-right whitespace-nowrap">{t("common.profit")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -507,9 +512,13 @@ function SaleDetailPage() {
                       <TableCell className="text-right whitespace-nowrap">
                         {qty(i.quantity)} {t(`unit.${i.unit}`)}
                       </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{qty(i.returned_quantity)}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{qty(line(i).remaining)}</TableCell>
                       <TableCell className="text-right whitespace-nowrap">{money(i.rate)}</TableCell>
-                      <TableCell className="text-right whitespace-nowrap">{money(i.amount)}</TableCell>
-                      <TableCell className="text-right whitespace-nowrap">{money(i.profit)}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{money(line(i).original)}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{money(line(i).returned)}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{money(line(i).net)}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{money(line(i).profit)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -529,10 +538,15 @@ function SaleDetailPage() {
             <CardContent className="space-y-2 text-sm">
               <SummaryRow label={t("sales.subtotal")} value={money(s.subtotal)} />
               <SummaryRow label={t("sales.discount")} value={`- ${money(s.discount)}`} />
+              {num(s.returned_amount) > 0 && (
+                <SummaryRow label={t("fin.returnedAmount")} value={`- ${money(s.returned_amount)}`} />
+              )}
               <SummaryRow label={t("sales.grandTotal")} value={money(s.total)} strong />
-              <SummaryRow label={t("common.paid")} value={money(s.paid_amount)} />
+              {cancelled && <SummaryRow label={t("fin.activeAmount")} value={money(0)} strong />}
+              <SummaryRow label={t("common.paid")} value={money(s.received_amount)} />
               <SummaryRow label={t("common.pending")} value={money(s.pending_amount)} />
-              <SummaryRow label={t("common.profit")} value={money(s.profit)} />
+              {num(s.credit_amount) > 0 && <SummaryRow label={t("fin.credit")} value={money(s.credit_amount)} />}
+              <SummaryRow label={t("common.profit")} value={money(cancelled ? 0 : s.profit)} />
               <div className="pt-2">
                 <Link
                   to="/customers/$id"
