@@ -108,6 +108,9 @@ export type SaleRow = {
   total: number;
   paid_amount: number;
   pending_amount: number;
+  received_amount: number;
+  credit_amount: number;
+  returned_amount: number;
   cogs: number;
   profit: number;
   status: "ACTIVE" | "CANCELLED";
@@ -572,6 +575,118 @@ export async function fetchSaleReturn(id: string): Promise<SaleReturnRow> {
   );
 }
 
+/* ---------------- shared financial summary (single source of truth) ---------------- */
+
+export type BusinessSummary = {
+  net_sales: number;
+  gross_sales: number;
+  returns_amount: number;
+  returns_in_period: number;
+  discount: number;
+  net_cogs: number;
+  net_profit: number;
+  received: number;
+  pending: number;
+  credit_due: number;
+  orders: number;
+  cancelled_orders: number;
+  cancelled_amount: number;
+  purchases: number;
+  stock_investment: number;
+  stock_value: number;
+  stock_units: number;
+  products: number;
+  customers: number;
+};
+
+export type MonthlyRow = {
+  month: string;
+  orders: number;
+  net_sales: number;
+  net_cogs: number;
+  net_profit: number;
+  received: number;
+  pending: number;
+  credit_due: number;
+  returns_amount: number;
+};
+
+/** All-time when range is omitted. Every page and export reads totals from here. */
+export async function fetchBusinessSummary(range?: DateRange): Promise<BusinessSummary> {
+  const res = await db.rpc("business_summary", { p_from: range?.from ?? null, p_to: range?.to ?? null });
+  if (res.error) throw new Error(res.error.message);
+  const raw = (res.data ?? {}) as Record<string, unknown>;
+  return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, Number(v ?? 0)])) as BusinessSummary;
+}
+
+export async function fetchBusinessMonthly(range?: DateRange): Promise<MonthlyRow[]> {
+  const res = await db.rpc("business_monthly", { p_from: range?.from ?? null, p_to: range?.to ?? null });
+  if (res.error) throw new Error(res.error.message);
+  return ((res.data ?? []) as MonthlyRow[]).map((r) => ({
+    ...r,
+    orders: Number(r.orders),
+    net_sales: Number(r.net_sales),
+    net_cogs: Number(r.net_cogs),
+    net_profit: Number(r.net_profit),
+    received: Number(r.received),
+    pending: Number(r.pending),
+    credit_due: Number(r.credit_due),
+    returns_amount: Number(r.returns_amount),
+  }));
+}
+
+export type SaleItemNetRow = {
+  id: string;
+  sale_id: string;
+  product_id: string;
+  quantity: number;
+  returned_quantity: number;
+  remaining_quantity: number;
+  unit: Unit;
+  rate: number;
+  original_amount: number;
+  returned_amount: number;
+  net_amount: number;
+  net_cogs: number;
+  net_profit: number;
+  status: "ACTIVE" | "CANCELLED";
+  sale_date: string;
+  invoice_no: string;
+  customer_id: string;
+};
+
+/** Item lines with invoice discount allocated proportionally (sum of net_amount = invoice total). */
+export async function fetchSaleItemsNet(opts: { range?: DateRange; customerId?: string; saleId?: string } = {}) {
+  let q = db.from("v_sale_item_net").select("*").order("sale_date", { ascending: false });
+  if (opts.range) q = q.gte("sale_date", opts.range.from).lte("sale_date", opts.range.to);
+  if (opts.customerId) q = q.eq("customer_id", opts.customerId);
+  if (opts.saleId) q = q.eq("sale_id", opts.saleId);
+  return unwrap<SaleItemNetRow[]>(await q);
+}
+
+export type SaleFinancialStatus = "paid" | "partial" | "unpaid" | "credit" | "cancelled" | "returned";
+
+/** Payment status from net sale values: never negative pending; overpayment shows as credit. */
+export function saleFinancialStatus(s: {
+  status: string;
+  total: number;
+  pending_amount: number;
+  received_amount?: number;
+  credit_amount?: number;
+  returned_amount?: number;
+}): SaleFinancialStatus {
+  if (s.status === "CANCELLED") return "cancelled";
+  if (num0(s.credit_amount) > 0.009) return "credit";
+  if (num0(s.total) <= 0.009 && num0(s.returned_amount) > 0) return "returned";
+  if (num0(s.pending_amount) <= 0.009) return "paid";
+  return num0(s.received_amount) > 0.009 ? "partial" : "unpaid";
+}
+
+function num0(v: unknown) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
 /* ---------------- demo data ---------------- */
 
 export async function seedDemoData() {
@@ -620,6 +735,9 @@ export function friendlyError(message: string, t: (k: string, v?: Record<string,
   }
   if (message.includes("PAYMENT_EXCEEDS_OUTSTANDING")) return t("payments.exceeds");
   if (message.includes("RETURN_EXCEEDS_SOLD")) return t("returns.exceeds");
+  if (message.includes("ALREADY_CANCELLED")) return t("sales.alreadyCancelled");
+  if (message.includes("ALREADY_FULLY_RETURNED")) return t("returns.exceeds");
+  if (message.includes("SALE_CANCELLED")) return t("sales.alreadyCancelled");
   if (message.includes("NO_ITEMS")) return t("sales.noItems");
   if (message.includes("INVALID_QUANTITY") || message.includes("INVALID_PRICE") || message.includes("INVALID_DISCOUNT"))
     return t("common.error");
