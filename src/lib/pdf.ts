@@ -157,7 +157,7 @@ export type InvoiceData = {
 };
 
 function statusOf(sale: SaleRow): InvoiceStatus {
-  return saleFinancialStatus({
+  const st = saleFinancialStatus({
     status: sale.status,
     total: sale.total,
     pending_amount: sale.pending_amount,
@@ -165,6 +165,7 @@ function statusOf(sale: SaleRow): InvoiceStatus {
     credit_amount: sale.credit_amount,
     returned_amount: sale.returned_amount,
   });
+  return st === "unpaid" ? "pending" : st;
 }
 
 export function saleToInvoice(
