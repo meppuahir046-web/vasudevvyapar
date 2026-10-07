@@ -212,7 +212,7 @@ export function saleToInvoice(
         };
       })
       .filter((l) => l.quantity > 0),
-    subtotal: Number(sale.subtotal),
+    subtotal: Number(sale.subtotal) + Math.max(0, Number(sale.returned_amount ?? 0)),
     discount: Number(sale.discount),
     total: sale.status === "CANCELLED" ? 0 : Number(sale.total),
     paid: Number(sale.received_amount),
