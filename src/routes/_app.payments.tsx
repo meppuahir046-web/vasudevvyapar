@@ -266,7 +266,11 @@ function PaymentsPage() {
                       </TableCell>
                       <TableCell>{t(`payments.method.${p.method}`)}</TableCell>
                       <TableCell>
-                        {isValidReceivedPayment(p) ? t("common.paid") : t("payments.reversed")}
+                        {isValidReceivedPayment(p)
+                          ? t("common.paid")
+                          : p.sales?.status === "CANCELLED"
+                            ? t("payments.cancelledSale")
+                            : t("payments.reversed")}
                       </TableCell>
                       <TableCell>{p.reference ?? "-"}</TableCell>
                       <TableCell className="text-right font-medium">{money(p.amount)}</TableCell>
