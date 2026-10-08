@@ -50,6 +50,9 @@ function compact(v: number) {
   return String(Math.round(v));
 }
 
+const kpiLink =
+  "block min-w-0 cursor-pointer rounded-xl transition hover:-translate-y-0.5 hover:shadow-md hover:ring-1 hover:ring-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]";
+
 function DashboardPage() {
   const { t } = useI18n();
   const today = presetRange("today");
@@ -100,19 +103,45 @@ function DashboardPage() {
       )}
 
       <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-        <StatCard label={t("dashboard.todaySales")} value={money(todayS.data?.net_sales ?? 0)} />
-        <StatCard label={t("dashboard.todayProfit")} value={money(todayS.data?.net_profit ?? 0)} tone="success" />
-        <StatCard label={t("dashboard.monthSales")} value={money(monthS.data?.net_sales ?? 0)} />
-        <StatCard label={t("dashboard.monthProfit")} value={money(monthS.data?.net_profit ?? 0)} tone="success" />
-        <StatCard label={t("dashboard.totalSales")} value={money(sum0?.net_sales ?? 0)} />
-        <StatCard label={t("dashboard.totalReceived")} value={money(sum0?.received ?? 0)} tone="success" />
-        <StatCard label={t("dashboard.totalPending")} value={money(sum0?.pending ?? 0)} tone="danger" />
-        <StatCard label={t("fin.credit")} value={money(sum0?.credit_due ?? 0)} />
-        <StatCard label={t("dashboard.totalProfit")} value={money(sum0?.net_profit ?? 0)} tone="success" />
-        <StatCard label={t("dashboard.totalProducts")} value={String(sum0?.products ?? 0)} />
-        <StatCard label={t("dashboard.totalCustomers")} value={String(sum0?.customers ?? 0)} />
-        <StatCard label={t("dashboard.stockInvestment")} value={money(sum0?.stock_investment ?? 0)} />
-        <StatCard label={t("dashboard.stockValue")} value={money(sum0?.stock_value ?? 0)} />
+        <Link to="/sales" search={{ range: "today" }} className={kpiLink}>
+          <StatCard label={t("dashboard.todaySales")} value={money(todayS.data?.net_sales ?? 0)} />
+        </Link>
+        <Link to="/reports" search={{ range: "today" }} className={kpiLink}>
+          <StatCard label={t("dashboard.todayProfit")} value={money(todayS.data?.net_profit ?? 0)} tone="success" />
+        </Link>
+        <Link to="/sales" search={{ range: "thisMonth" }} className={kpiLink}>
+          <StatCard label={t("dashboard.monthSales")} value={money(monthS.data?.net_sales ?? 0)} />
+        </Link>
+        <Link to="/reports" search={{ range: "thisMonth" }} className={kpiLink}>
+          <StatCard label={t("dashboard.monthProfit")} value={money(monthS.data?.net_profit ?? 0)} tone="success" />
+        </Link>
+        <Link to="/sales" search={{ range: "all" }} className={kpiLink}>
+          <StatCard label={t("dashboard.totalSales")} value={money(sum0?.net_sales ?? 0)} />
+        </Link>
+        <Link to="/payments" className={kpiLink}>
+          <StatCard label={t("dashboard.totalReceived")} value={money(sum0?.received ?? 0)} tone="success" />
+        </Link>
+        <Link to="/payments" className={kpiLink}>
+          <StatCard label={t("dashboard.totalPending")} value={money(sum0?.pending ?? 0)} tone="danger" />
+        </Link>
+        <Link to="/payments" className={kpiLink}>
+          <StatCard label={t("fin.credit")} value={money(sum0?.credit_due ?? 0)} />
+        </Link>
+        <Link to="/reports" search={{ range: "all" }} className={kpiLink}>
+          <StatCard label={t("dashboard.totalProfit")} value={money(sum0?.net_profit ?? 0)} tone="success" />
+        </Link>
+        <Link to="/products" className={kpiLink}>
+          <StatCard label={t("dashboard.totalProducts")} value={String(sum0?.products ?? 0)} />
+        </Link>
+        <Link to="/customers" className={kpiLink}>
+          <StatCard label={t("dashboard.totalCustomers")} value={String(sum0?.customers ?? 0)} />
+        </Link>
+        <Link to="/purchases" className={kpiLink}>
+          <StatCard label={t("dashboard.stockInvestment")} value={money(sum0?.stock_investment ?? 0)} />
+        </Link>
+        <Link to="/inventory" className={kpiLink}>
+          <StatCard label={t("dashboard.stockValue")} value={money(sum0?.stock_value ?? 0)} />
+        </Link>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

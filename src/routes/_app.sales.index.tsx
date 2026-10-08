@@ -20,6 +20,8 @@ import { fetchBusinessSummary, fetchSales, saleFinancialStatus } from "@/lib/dat
 import { formatDate, money, num, presetRange, type DateRange, type RangePreset } from "@/lib/format";
 
 export const Route = createFileRoute("/_app/sales/")({
+  validateSearch: (s: Record<string, unknown>): { range?: "today" | "thisMonth" | "all" } =>
+    s.range === "today" || s.range === "thisMonth" || s.range === "all" ? { range: s.range } : {},
   head: () => ({
     meta: [
       { title: "Sales & Invoices — RetailBook" },
@@ -32,9 +34,10 @@ export const Route = createFileRoute("/_app/sales/")({
 });
 
 function SalesPage() {
+  const initialPreset: RangePreset = Route.useSearch().range ?? "all";
   const { t } = useI18n();
-  const [preset, setPreset] = useState<RangePreset>("all");
-  const [range, setRange] = useState<DateRange>(presetRange("all"));
+  const [preset, setPreset] = useState<RangePreset>(initialPreset);
+  const [range, setRange] = useState<DateRange>(presetRange(initialPreset));
   const [search, setSearch] = useState("");
 
   const sales = useQuery({

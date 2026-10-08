@@ -27,6 +27,8 @@ import {
 } from "@/lib/format";
 
 export const Route = createFileRoute("/_app/reports")({
+  validateSearch: (s: Record<string, unknown>): { range?: "today" | "thisMonth" | "all" } =>
+    s.range === "today" || s.range === "thisMonth" || s.range === "all" ? { range: s.range } : {},
   head: () => ({
     meta: [
       { title: "Reports & Excel Export — RetailBook" },
@@ -43,9 +45,10 @@ export const Route = createFileRoute("/_app/reports")({
 });
 
 function ReportsPage() {
+  const initialPreset: RangePreset = Route.useSearch().range ?? "all";
   const { t } = useI18n();
-  const [preset, setPreset] = useState<RangePreset>("all");
-  const [range, setRange] = useState<DateRange>(presetRange("all"));
+  const [preset, setPreset] = useState<RangePreset>(initialPreset);
+  const [range, setRange] = useState<DateRange>(presetRange(initialPreset));
   const [busy, setBusy] = useState(false);
 
   const rangeArg = preset === "all" ? undefined : range;
