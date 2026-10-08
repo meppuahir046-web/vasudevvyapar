@@ -42,12 +42,15 @@ export const Route = createFileRoute("/_app/payments")({
       { property: "og:description", content: "Cash, UPI, bank and card payments with outstanding balance tracking." },
     ],
   }),
+  validateSearch: ({ due: d }: Record<string, unknown>): { due?: "pending" | "credit" } =>
+    d === "pending" || d === "credit" ? { due: d } : {},
   component: PaymentsPage,
 });
 
 function PaymentsPage() {
   const { t } = useI18n();
   const qc = useQueryClient();
+  const { due } = Route.useSearch();
   const [preset, setPreset] = useState<RangePreset>("all");
   const [range, setRange] = useState<DateRange>(presetRange("all"));
   const [open, setOpen] = useState(false);
@@ -74,6 +77,15 @@ function PaymentsPage() {
   const rangeArg = preset === "all" ? undefined : range;
   const summary = useQuery({ queryKey: ["summary", rangeArg ?? "all"], queryFn: () => fetchBusinessSummary(rangeArg) });
   const totals = summary.data;
+
+  const dueSales = useQuery({
+    queryKey: ["sales", "due", due],
+    queryFn: () => fetchSales({ status: "ACTIVE" }),
+    enabled: !!due,
+  });
+  const dueRows = (dueSales.data ?? []).filter((s) =>
+    due === "pending" ? num(s.pending_amount) > 0.009 : num(s.credit_amount) > 0.009,
+  );
 
   const outstanding = num((customers.data ?? []).find((c) => c.id === customerId)?.total_pending);
 
@@ -213,6 +225,61 @@ function PaymentsPage() {
         <StatCard label={t("fin.credit")} value={money(totals?.credit_due ?? 0)} />
         <StatCard label={t("fin.returned")} value={money(totals?.returns_amount ?? 0)} />
       </div>
+
+      {due && (
+        <Card className="mt-4">
+          <CardContent className="space-y-3 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-base font-semibold">
+                {due === "pending" ? t("payments.duePending") : t("payments.dueCredit")}
+              </h2>
+              <Link to="/payments" search={{}} className="text-sm text-primary hover:underline">
+                {t("payments.showAll")}
+              </Link>
+            </div>
+            {dueSales.isLoading ? (
+              <Loading />
+            ) : dueRows.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("common.invoice")}</TableHead>
+                      <TableHead>{t("common.customer")}</TableHead>
+                      <TableHead>{t("common.date")}</TableHead>
+                      <TableHead className="text-right">{t("fin.netAmount")}</TableHead>
+                      <TableHead className="text-right">{t("dashboard.totalReceived")}</TableHead>
+                      <TableHead className="text-right">
+                        {due === "pending" ? t("dashboard.totalPending") : t("fin.credit")}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dueRows.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell>
+                          <Link to="/sales/$id" params={{ id: s.id }} className="text-primary hover:underline">
+                            {s.invoice_no}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{s.customers?.name ?? "-"}</TableCell>
+                        <TableCell>{formatDate(s.sale_date)}</TableCell>
+                        <TableCell className="text-right">{money(s.total)}</TableCell>
+                        <TableCell className="text-right">{money(s.received_amount)}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          {money(due === "pending" ? s.pending_amount : s.credit_amount)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="mt-4">
         <CardContent className="space-y-4 p-4">

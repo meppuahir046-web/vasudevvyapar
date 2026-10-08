@@ -121,10 +121,10 @@ function DashboardPage() {
         <Link to="/payments" className={kpiLink}>
           <StatCard label={t("dashboard.totalReceived")} value={money(sum0?.received ?? 0)} tone="success" />
         </Link>
-        <Link to="/payments" className={kpiLink}>
+        <Link to="/payments" search={{ due: "pending" }} className={kpiLink}>
           <StatCard label={t("dashboard.totalPending")} value={money(sum0?.pending ?? 0)} tone="danger" />
         </Link>
-        <Link to="/payments" className={kpiLink}>
+        <Link to="/payments" search={{ due: "credit" }} className={kpiLink}>
           <StatCard label={t("fin.credit")} value={money(sum0?.credit_due ?? 0)} />
         </Link>
         <Link to="/reports" search={{ range: "all" }} className={kpiLink}>
