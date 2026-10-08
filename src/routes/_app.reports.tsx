@@ -27,8 +27,8 @@ import {
 } from "@/lib/format";
 
 export const Route = createFileRoute("/_app/reports")({
-  validateSearch: (s: Record<string, unknown>): { range?: "today" | "thisMonth" | "all" } =>
-    s.range === "today" || s.range === "thisMonth" || s.range === "all" ? { range: s.range } : {},
+  validateSearch: ({ range: r }: Record<string, unknown>): { range?: "today" | "thisMonth" | "all" } =>
+    r === "today" || r === "thisMonth" || r === "all" ? { range: r } : {},
   head: () => ({
     meta: [
       { title: "Reports & Excel Export — RetailBook" },

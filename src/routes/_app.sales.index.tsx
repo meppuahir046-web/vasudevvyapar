@@ -20,8 +20,8 @@ import { fetchBusinessSummary, fetchSales, saleFinancialStatus } from "@/lib/dat
 import { formatDate, money, num, presetRange, type DateRange, type RangePreset } from "@/lib/format";
 
 export const Route = createFileRoute("/_app/sales/")({
-  validateSearch: (s: Record<string, unknown>): { range?: "today" | "thisMonth" | "all" } =>
-    s.range === "today" || s.range === "thisMonth" || s.range === "all" ? { range: s.range } : {},
+  validateSearch: ({ range: r }: Record<string, unknown>): { range?: "today" | "thisMonth" | "all" } =>
+    r === "today" || r === "thisMonth" || r === "all" ? { range: r } : {},
   head: () => ({
     meta: [
       { title: "Sales & Invoices — RetailBook" },
