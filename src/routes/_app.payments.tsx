@@ -42,12 +42,15 @@ export const Route = createFileRoute("/_app/payments")({
       { property: "og:description", content: "Cash, UPI, bank and card payments with outstanding balance tracking." },
     ],
   }),
+  validateSearch: ({ due: d }: Record<string, unknown>): { due?: "pending" | "credit" } =>
+    d === "pending" || d === "credit" ? { due: d } : {},
   component: PaymentsPage,
 });
 
 function PaymentsPage() {
   const { t } = useI18n();
   const qc = useQueryClient();
+  const { due } = Route.useSearch();
   const [preset, setPreset] = useState<RangePreset>("all");
   const [range, setRange] = useState<DateRange>(presetRange("all"));
   const [open, setOpen] = useState(false);
