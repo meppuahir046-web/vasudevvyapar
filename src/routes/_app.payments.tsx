@@ -78,6 +78,15 @@ function PaymentsPage() {
   const summary = useQuery({ queryKey: ["summary", rangeArg ?? "all"], queryFn: () => fetchBusinessSummary(rangeArg) });
   const totals = summary.data;
 
+  const dueSales = useQuery({
+    queryKey: ["sales", "due", due],
+    queryFn: () => fetchSales({ status: "ACTIVE" }),
+    enabled: !!due,
+  });
+  const dueRows = (dueSales.data ?? []).filter((s) =>
+    due === "pending" ? num(s.pending_amount) > 0.009 : num(s.credit_amount) > 0.009,
+  );
+
   const outstanding = num((customers.data ?? []).find((c) => c.id === customerId)?.total_pending);
 
   const save = useMutation({
